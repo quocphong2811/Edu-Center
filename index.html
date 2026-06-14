@@ -1693,49 +1693,6 @@ function init() {
 
   populateClassSelects();
   renderDashboard();
-
-  // call API
-}
-
-async function runApiTest() {
-  // const supabase = window.supabase.createClient(
-  //   "https://vmthdbkpnejquzwinjnd.supabase.co",
-  //   "sb_publishable_z2BL69bkYGki5wDvagVZGQ_bpFowUVR"
-  // );
-  const url = $('api-test-url').value.trim();
-  const paramsStr = $('api-test-params').value.trim();
-  if (!url) { showToast('Vui lòng nhập URL', 'error'); return; }
-  let params;
-  if (paramsStr) {
-    try { params = JSON.parse(paramsStr); } catch (e) { showToast('Tham số không hợp lệ', 'error'); return; }
-  }
-  const resultEl = $('api-test-result');
-  resultEl.style.display = 'block';
-  resultEl.textContent = '⏳ Đang tải...';
-  try {
-    const fetchFn = window.apiGet ? window.apiGet : window.apiRequest;
-    // const data = await fetchFn(url, { params, timeoutMs: 15000 });
-    // resultEl.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-    // resultEl.style.color = 'var(--gray-800)';
-    // showToast('Gọi API thành công');
-
-    // const { data, error } = await supabase
-    //   .from('students')
-    //   .select();
-
-    // console.log('Supabase API response:', { data, error });
-  } catch (err) {
-    const body = err && err.data ? JSON.stringify(err.data, null, 2) : (err.message || String(err));
-    resultEl.textContent = `Lỗi: ${err.message || err}\n${body}`;
-    resultEl.style.color = 'var(--red)';
-    showToast('Gọi API thất bại', 'error');
-  }
-}
-
-function copyApiResult() {
-  const txt = $('api-test-result').textContent || '';
-  if (!txt) { showToast('Không có kết quả để sao chép', 'error'); return; }
-  navigator.clipboard.writeText(txt).then(() => showToast('Đã sao chép')).catch(()=>showToast('Sao chép thất bại','error'));
 }
 
 init();
