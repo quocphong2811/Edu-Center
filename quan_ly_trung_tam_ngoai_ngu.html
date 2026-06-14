@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EduCenter — Quản lý Trung tâm Ngoại ngữ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --blue: #1A56DB;
+    --blue-light: #EBF3FF;
+    --blue-mid: #3B82F6;
+    --green: #10B981;
+    --green-light: #ECFDF5;
+    --red: #EF4444;
+    --red-light: #FEF2F2;
+    --yellow: #F59E0B;
+    --yellow-light: #FFFBEB;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF;
+    --gray-500: #6B7280;
+    --gray-600: #4B5563;
+    --gray-700: #374151;
+    --gray-800: #1F2937;
+    --gray-900: #111827;
+    --sidebar-w: 240px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--gray-50);
+    color: var(--gray-800);
+    display: flex;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-height: 100vh;
+    background: var(--gray-900);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 100;
+  }
+
+  .sidebar-logo {
+    padding: 20px 18px 16px;
+    border-bottom: 1px solid #2D3748;
+  }
+  .sidebar-logo .logo-badge {
+    display: inline-block;
+    background: var(--blue);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+  }
+  .sidebar-logo h1 {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .sidebar-logo p {
+    color: var(--gray-400);
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  .sidebar-nav { flex: 1; padding: 10px 0; overflow-y: auto; }
+
+  .nav-section-label {
+    color: var(--gray-500);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 12px 18px 4px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 18px;
+    color: var(--gray-400);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+    font-size: 13.5px;
+  }
+  .nav-item:hover { background: #2D3748; color: #fff; }
+  .nav-item.active {
+    background: #1E3A5F;
+    color: #fff;
+    border-left-color: var(--blue);
+  }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .sidebar-footer {
+    padding: 14px 18px;
+    border-top: 1px solid #2D3748;
+    color: var(--gray-500);
+    font-size: 11px;
+  }
+
+  /* ── MAIN CONTENT ── */
+  #main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0;
+    z-index: 50;
+  }
+  .topbar h2 { font-size: 17px; font-weight: 600; color: var(--gray-900); }
+  .topbar .topbar-meta { color: var(--gray-400); font-size: 12px; }
+
+  .content { padding: 24px 28px; flex: 1; }
+
+  /* ── SECTION PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── STATS CARDS ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .stat-card .stat-label { color: var(--gray-500); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card .stat-value { font-size: 26px; font-weight: 700; margin-top: 4px; color: var(--gray-900); }
+  .stat-card .stat-sub { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+  .stat-card.blue .stat-value { color: var(--blue); }
+  .stat-card.green .stat-value { color: var(--green); }
+  .stat-card.red .stat-value { color: var(--red); }
+  .stat-card.yellow .stat-value { color: var(--yellow); }
+
+  /* ── CARD ── */
+  .card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .card-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .card-header h3 { font-size: 14px; font-weight: 600; color: var(--gray-800); }
+  .card-body { padding: 18px; }
+
+  /* ── TABLE ── */
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: var(--gray-50);
+    color: var(--gray-500);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+  }
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--gray-100);
+    color: var(--gray-700);
+    vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--gray-50); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 7px 14px; border-radius: 7px; font-size: 13px; font-weight: 500;
+    border: none; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: #1445B8; }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn-success:hover { background: #059669; }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger:hover { background: #DC2626; }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--gray-300);
+    color: var(--gray-700);
+  }
+  .btn-outline:hover { background: var(--gray-50); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-xs { padding: 3px 8px; font-size: 11px; }
+
+  /* ── FORM ── */
+  .form-grid { display: grid; gap: 14px; }
+  .form-grid-2 { grid-template-columns: 1fr 1fr; }
+  .form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 12px; font-weight: 500; color: var(--gray-600); }
+  .form-control {
+    padding: 8px 11px; border: 1px solid var(--gray-300); border-radius: 7px;
+    font-size: 13px; font-family: inherit; color: var(--gray-800);
+    transition: border 0.15s;
+  }
+  .form-control:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+  .form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 500;
+  }
+  .badge-green { background: var(--green-light); color: #065F46; }
+  .badge-red { background: var(--red-light); color: #991B1B; }
+  .badge-yellow { background: var(--yellow-light); color: #92400E; }
+  .badge-blue { background: var(--blue-light); color: #1E40AF; }
+  .badge-gray { background: var(--gray-100); color: var(--gray-600); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 12px; padding: 24px;
+    min-width: 420px; max-width: 560px; width: 90%;
+    max-height: 85vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .modal-header h3 { font-size: 15px; font-weight: 600; }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--gray-400); line-height: 1; }
+  .modal-close:hover { color: var(--gray-700); }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--gray-100); }
+
+  /* ── SEARCH BOX ── */
+  .search-box { position: relative; }
+  .search-box input { padding-left: 32px; min-width: 220px; }
+  .search-box::before { content: '🔍'; position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 13px; pointer-events: none; }
+
+  /* ── ATTENDANCE GRID ── */
+  .att-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 6px; }
+  .att-cell {
+    width: 34px; height: 34px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: all 0.12s;
+  }
+  .att-cell.present { background: var(--green-light); color: #065F46; border-color: #A7F3D0; }
+  .att-cell.absent-excused { background: var(--yellow-light); color: #92400E; border-color: #FDE68A; }
+  .att-cell.absent-unexcused { background: var(--red-light); color: #991B1B; border-color: #FCA5A5; }
+  .att-cell.not-set { background: var(--gray-100); color: var(--gray-400); border-color: var(--gray-200); }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar { background: var(--gray-100); border-radius: 99px; height: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 99px; background: var(--blue); }
+  .progress-fill.green { background: var(--green); }
+  .progress-fill.red { background: var(--red); }
+  .progress-fill.yellow { background: var(--yellow); }
+
+  /* ── RECEIPT ── */
+  .receipt {
+    border: 2px solid var(--gray-200); border-radius: 10px; padding: 24px;
+    font-size: 13px; max-width: 480px;
+  }
+  .receipt-header { text-align: center; margin-bottom: 18px; border-bottom: 2px dashed var(--gray-200); padding-bottom: 14px; }
+  .receipt-header h2 { font-size: 18px; color: var(--blue); margin-bottom: 2px; }
+  .receipt-header p { color: var(--gray-500); font-size: 12px; }
+  .receipt-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--gray-100); }
+  .receipt-row:last-child { border-bottom: none; }
+  .receipt-row.total { font-weight: 700; font-size: 14px; border-top: 2px solid var(--gray-300); margin-top: 6px; padding-top: 8px; }
+
+  /* ── CHART BAR ── */
+  .chart-bar-wrap { display: flex; align-items: flex-end; gap: 10px; height: 140px; padding: 0 4px; }
+  .chart-bar-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .chart-bar-fill { width: 100%; background: var(--blue); border-radius: 4px 4px 0 0; transition: height 0.4s; min-height: 4px; }
+  .chart-bar-label { font-size: 10px; color: var(--gray-500); }
+  .chart-bar-val { font-size: 10px; font-weight: 600; color: var(--gray-700); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--gray-900); color: #fff;
+    padding: 10px 18px; border-radius: 8px;
+    font-size: 13px; font-weight: 500;
+    opacity: 0; transform: translateY(10px);
+    transition: all 0.25s; pointer-events: none;
+    z-index: 999;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.success { background: var(--green); }
+  #toast.error { background: var(--red); }
+
+  /* ── TABS ── */
+  .tab-bar { display: flex; gap: 2px; border-bottom: 2px solid var(--gray-200); margin-bottom: 20px; }
+  .tab-btn {
+    padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--gray-500);
+    background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+  }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    #sidebar { width: 0; overflow: hidden; }
+    #main { margin-left: 0; }
+    .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+  }
+
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+  .text-muted { color: var(--gray-400); }
+  .fw-600 { font-weight: 600; }
+  .mt-8 { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; }
+  .flex { display: flex; }
+  .gap-8 { gap: 8px; }
+  .gap-12 { gap: 12px; }
+  .items-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .flex-wrap { flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════ SIDEBAR ════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-badge">EDUC</div>
+    <h1>EduCenter</h1>
+    <p>Quản lý Trung tâm Ngoại ngữ</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section-label">Tổng quan</div>
+    <div class="nav-item active" data-page="dashboard"><span class="icon">🏠</span> Tổng quan</div>
+
+    <div class="nav-section-label">Quản lý</div>
+    <div class="nav-item" data-page="students"><span class="icon">👤</span> Học viên</div>
+    <div class="nav-item" data-page="classes"><span class="icon">🏫</span> Lớp học</div>
+    <div class="nav-item" data-page="teacher-att"><span class="icon">📋</span> Điểm danh GV</div>
+    <div class="nav-item" data-page="student-att"><span class="icon">✅</span> Điểm danh HV</div>
+    <div class="nav-item" data-page="homework"><span class="icon">📚</span> Bài tập & Học bài</div>
+
+    <div class="nav-section-label">Tài chính</div>
+    <div class="nav-item" data-page="tuition"><span class="icon">💰</span> Học phí</div>
+    <div class="nav-item" data-page="receipts"><span class="icon">🧾</span> Phiếu thu</div>
+    <div class="nav-item" data-page="reports"><span class="icon">📊</span> Báo cáo doanh thu</div>
+  </div>
+  <div class="sidebar-footer">
+    EduCenter v1.0 • 2025
+  </div>
+</nav>
+
+<!-- ════════════════════════════ MAIN ════════════════════════════ -->
+<div id="main">
+  <div class="topbar">
+    <h2 id="page-title">Tổng quan</h2>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="topbar-meta" id="topbar-date"></span>
+      <button class="btn btn-outline btn-sm" onclick="openModal('modal-api-test')">🔗 Test API</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div id="page-dashboard" class="page active">
+      <div class="stats-row">
+        <div class="stat-card blue"><div class="stat-label">Học viên</div><div class="stat-value" id="dash-students">0</div><div class="stat-sub">đang theo học</div></div>
+        <div class="stat-card"><div class="stat-label">Lớp học</div><div class="stat-value" id="dash-classes">0</div><div class="stat-sub">đang hoạt động</div></div>
+        <div class="stat-card green"><div class="stat-label">Đã thu tháng này</div><div class="stat-value" id="dash-collected">0đ</div><div class="stat-sub">tổng học phí thu</div></div>
+        <div class="stat-card red"><div class="stat-label">Chưa nộp</div><div class="stat-value" id="dash-unpaid">0</div><div class="stat-sub">học viên còn nợ</div></div>
+        <div class="stat-card yellow"><div class="stat-label">Vắng hôm nay</div><div class="stat-value" id="dash-absent">0</div><div class="stat-sub">học viên vắng</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="card">
+          <div class="card-header"><h3>📋 Học viên chưa nộp học phí</h3></div>
+          <div class="card-body tbl-wrap">
+            <table>
+              <thead><tr><th>Học viên</th><th>Lớp</th><th>Còn thiếu</th></tr></thead>
+              <tbody id="dash-unpaid-list"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>📊 Doanh thu 6 tháng gần nhất</h3></div>
+          <div class="card-body">
+            <div class="chart-bar-wrap" id="dash-chart"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h3>🏫 Tình trạng lớp học</h3></div>
+        <div class="card-body tbl-wrap">
+          <table>
+            <thead><tr><th>Lớp</th><th>Giáo viên</th><th>Sĩ số</th><th>Học phí/buổi</th><th>Số buổi tháng này</th><th>Học phí/tháng</th></tr></thead>
+            <tbody id="dash-classes-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STUDENTS ══ -->
+    <div id="page-students" class="page">
+      <div class="card">
+        <div class="card-header">
+          <h3>Danh sách Học viên</h3>
+          <div class="flex gap-8 flex-wrap">
+            <div class="search-box"><input type="text" class="form-control" id="student-search" placeholder="Tìm kiếm..." oninput="filterStudents()"></div>
+            <select class="form-control" id="student-filter-class" onchange="filterStudents()"><option value="">— Tất cả lớp —</option></select>
+            <button class="btn btn-primary" onclick="openStudentModal()">＋ Thêm học viên</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Họ tên</th><th>Lớp</th><th>SĐT Học viên</th><th>SĐT Phụ huynh</th><th>Trạng thái HP</th><th>Thao tác</th></tr></thead>
+            <tbody id="student-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CLASSES ══ -->
+    <div id="page-classes" class="page">
+      <div class="card">
+        <div class="card-header">
+          <h3>Quản lý Lớp học</h3>
+          <button class="btn btn-primary" onclick="openClassModal()">＋ Thêm lớp</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Tên lớp</th><th>Giáo viên</th><th>Học phí/buổi</th><th>Lịch học</th><th>Sĩ số</th><th>Thao tác</th></tr></thead>
+            <tbody id="class-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TEACHER ATTENDANCE ══ -->
+    <div id="page-teacher-att" class="page">
+      <div class="stats-row">
+        <div class="stat-card blue"><div class="stat-label">Tổng buổi dạy tháng này</div><div class="stat-value" id="tatt-total">0</div></div>
+        <div class="stat-card green"><div class="stat-label">Tổng HP phát sinh</div><div class="stat-value" id="tatt-tuition">0đ</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>📋 Điểm danh Giáo viên dạy</h3>
+          <div class="flex gap-8 flex-wrap">
+            <select class="form-control" id="tatt-class-select"><option value="">— Chọn lớp —</option></select>
+            <input type="month" class="form-control" id="tatt-month">
+            <button class="btn btn-primary" onclick="loadTeacherAtt()">Xem</button>
+          </div>
+        </div>
+        <div class="card-body" id="tatt-content">
+          <p class="text-muted text-center">Chọn lớp và tháng để xem điểm danh giáo viên.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ STUDENT ATTENDANCE ══ -->
+    <div id="page-student-att" class="page">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchAttTab('att-record', this)">Ghi điểm danh</button>
+        <button class="tab-btn" onclick="switchAttTab('att-report', this)">Báo cáo vắng</button>
+      </div>
+
+      <div id="att-record" class="tab-pane active">
+        <div class="card">
+          <div class="card-header">
+            <h3>✅ Điểm danh Học viên</h3>
+            <div class="flex gap-8 flex-wrap">
+              <select class="form-control" id="satt-class-select"><option value="">— Chọn lớp —</option></select>
+              <input type="date" class="form-control" id="satt-date">
+              <button class="btn btn-primary" onclick="loadStudentAtt()">Tải danh sách</button>
+            </div>
+          </div>
+          <div class="card-body" id="satt-content">
+            <p class="text-muted text-center">Chọn lớp và ngày để điểm danh.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="att-report" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <h3>📋 Báo cáo vắng mặt</h3>
+            <div class="flex gap-8 flex-wrap">
+              <select class="form-control" id="satt-report-class"><option value="">— Tất cả lớp —</option></select>
+              <input type="month" class="form-control" id="satt-report-month">
+              <button class="btn btn-outline" onclick="renderAttReport()">Xem báo cáo</button>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Học viên</th><th>Lớp</th><th>Vắng có phép</th><th>Vắng không phép</th><th>Tổng vắng</th><th>Tỉ lệ có mặt</th></tr></thead>
+              <tbody id="satt-report-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ HOMEWORK ══ -->
+    <div id="page-homework" class="page">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchHWTab('hw-record', this)">Ghi nhận</button>
+        <button class="tab-btn" onclick="switchHWTab('hw-report', this)">Báo cáo</button>
+      </div>
+
+      <div id="hw-record" class="tab-pane active">
+        <div class="card">
+          <div class="card-header">
+            <h3>📚 Ghi nhận Bài tập & Học bài</h3>
+            <div class="flex gap-8 flex-wrap">
+              <select class="form-control" id="hw-class-select"><option value="">— Chọn lớp —</option></select>
+              <input type="date" class="form-control" id="hw-date">
+              <button class="btn btn-primary" onclick="loadHomework()">Tải danh sách</button>
+            </div>
+          </div>
+          <div class="card-body" id="hw-content">
+            <p class="text-muted text-center">Chọn lớp và ngày để ghi nhận bài tập.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="hw-report" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <h3>📈 Báo cáo tỉ lệ hoàn thành</h3>
+            <div class="flex gap-8 flex-wrap">
+              <select class="form-control" id="hw-report-class"><option value="">— Tất cả lớp —</option></select>
+              <select class="form-control" id="hw-report-period">
+                <option value="week">Theo tuần</option>
+                <option value="semester">Theo học kì</option>
+              </select>
+              <button class="btn btn-outline" onclick="renderHWReport()">Xem báo cáo</button>
+            </div>
+          </div>
+          <div class="card-body" id="hw-report-body">
+            <p class="text-muted text-center">Chọn lớp và kỳ để xem báo cáo.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TUITION ══ -->
+    <div id="page-tuition" class="page">
+      <div class="stats-row">
+        <div class="stat-card green"><div class="stat-label">Đã nộp đủ</div><div class="stat-value" id="t-paid">0</div><div class="stat-sub">học viên</div></div>
+        <div class="stat-card red"><div class="stat-label">Chưa nộp đủ</div><div class="stat-value" id="t-unpaid">0</div><div class="stat-sub">học viên</div></div>
+        <div class="stat-card blue"><div class="stat-label">Tổng thu tháng này</div><div class="stat-value" id="t-total">0đ</div></div>
+        <div class="stat-card yellow"><div class="stat-label">Còn thiếu</div><div class="stat-value" id="t-owed">0đ</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>💰 Bảng học phí</h3>
+          <div class="flex gap-8 flex-wrap">
+            <input type="month" class="form-control" id="t-month">
+            <select class="form-control" id="t-filter-class"><option value="">— Tất cả lớp —</option></select>
+            <select class="form-control" id="t-filter-status">
+              <option value="">— Tất cả —</option>
+              <option value="paid">Đã nộp đủ</option>
+              <option value="partial">Nộp một phần</option>
+              <option value="unpaid">Chưa nộp</option>
+            </select>
+            <button class="btn btn-outline" onclick="renderTuition()">Lọc</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Học viên</th><th>Lớp</th><th>Số buổi</th><th>HP/buổi</th><th>Phải nộp</th><th>Đã nộp</th><th>Còn thiếu</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+            <tbody id="tuition-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ RECEIPTS ══ -->
+    <div id="page-receipts" class="page">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchReceiptTab('rc-create', this)">Lập phiếu thu</button>
+        <button class="tab-btn" onclick="switchReceiptTab('rc-history', this)">Lịch sử thu tiền</button>
+      </div>
+
+      <div id="rc-create" class="tab-pane active">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="card">
+            <div class="card-header"><h3>🧾 Tạo phiếu thu mới</h3></div>
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Học viên</label>
+                  <select class="form-control" id="rc-student" onchange="fillReceiptInfo()"><option value="">— Chọn học viên —</option></select>
+                </div>
+                <div class="form-grid form-grid-2">
+                  <div class="form-group"><label>Tháng</label><input type="month" class="form-control" id="rc-month"></div>
+                  <div class="form-group"><label>Lớp</label><input type="text" class="form-control" id="rc-class" readonly></div>
+                </div>
+                <div class="form-grid form-grid-2">
+                  <div class="form-group"><label>Số buổi học</label><input type="number" class="form-control" id="rc-sessions" oninput="calcReceipt()"></div>
+                  <div class="form-group"><label>HP/buổi (đồng)</label><input type="number" class="form-control" id="rc-rate" oninput="calcReceipt()"></div>
+                </div>
+                <div class="form-group">
+                  <label>Số tiền phải nộp</label>
+                  <input type="number" class="form-control" id="rc-required" readonly style="background:var(--gray-50)">
+                </div>
+                <div class="form-group">
+                  <label>Số tiền đã nộp lần này</label>
+                  <input type="number" class="form-control" id="rc-paid" oninput="calcReceipt()">
+                </div>
+                <div class="form-group">
+                  <label>Số tiền còn thiếu</label>
+                  <input type="number" class="form-control" id="rc-remaining" readonly style="background:var(--gray-50)">
+                </div>
+                <div class="form-group">
+                  <label>Ghi chú</label>
+                  <input type="text" class="form-control" id="rc-note" placeholder="Ghi chú thêm...">
+                </div>
+                <button class="btn btn-success" onclick="createReceipt()">✓ Lập phiếu & Lưu</button>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>👁️ Xem trước phiếu thu</h3></div>
+            <div class="card-body" id="receipt-preview">
+              <p class="text-muted text-center">Chọn học viên để xem trước phiếu thu.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="rc-history" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <h3>📜 Lịch sử thu tiền</h3>
+            <div class="flex gap-8 flex-wrap">
+              <div class="search-box"><input type="text" class="form-control" id="rc-search" placeholder="Tìm học viên..." oninput="filterReceipts()"></div>
+              <input type="month" class="form-control" id="rc-filter-month" onchange="filterReceipts()">
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Mã phiếu</th><th>Ngày lập</th><th>Học viên</th><th>Lớp</th><th>Tháng HP</th><th>Phải nộp</th><th>Đã nộp</th><th>Còn thiếu</th><th>Ghi chú</th></tr></thead>
+              <tbody id="receipt-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ REPORTS ══ -->
+    <div id="page-reports" class="page">
+      <div class="card">
+        <div class="card-header">
+          <h3>📊 Báo cáo Doanh thu theo tháng</h3>
+          <div class="flex gap-8">
+            <input type="number" class="form-control" id="rpt-year" placeholder="Năm" style="width:90px">
+            <button class="btn btn-primary" onclick="renderReport()">Xem báo cáo</button>
+            <button class="btn btn-outline" onclick="exportReport()">⬇ Xuất CSV</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart-bar-wrap" id="report-chart" style="height:180px;margin-bottom:24px;"></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Tháng</th><th>Số phiếu thu</th><th>Doanh thu</th><th>Số HV nộp đủ</th><th>Số HV còn nợ</th><th>Số tiền còn nợ</th></tr></thead>
+              <tbody id="report-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .content -->
+</div><!-- end #main -->
+
+<!-- ════════════════════════════ MODALS ════════════════════════════ -->
+
+<!-- Student Modal -->
+<div class="modal-overlay" id="modal-student">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-student-title">Thêm học viên</h3>
+      <button class="modal-close" onclick="closeModal('modal-student')">×</button>
+    </div>
+    <div class="form-grid">
+      <input type="hidden" id="edit-student-id">
+      <div class="form-group"><label>Họ và tên *</label><input type="text" class="form-control" id="s-name" placeholder="Nguyễn Văn A"></div>
+      <div class="form-group">
+        <label>Lớp *</label>
+        <select class="form-control" id="s-class"><option value="">— Chọn lớp —</option></select>
+      </div>
+      <div class="form-grid form-grid-2">
+        <div class="form-group"><label>SĐT Học viên</label><input type="text" class="form-control" id="s-phone" placeholder="09xx..."></div>
+        <div class="form-group"><label>SĐT Phụ huynh</label><input type="text" class="form-control" id="s-parent-phone" placeholder="09xx..."></div>
+      </div>
+      <div class="form-group"><label>Ghi chú</label><input type="text" class="form-control" id="s-note" placeholder="..."></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-student')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveStudent()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Class Modal -->
+<div class="modal-overlay" id="modal-class">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-class-title">Thêm lớp học</h3>
+      <button class="modal-close" onclick="closeModal('modal-class')">×</button>
+    </div>
+    <div class="form-grid">
+      <input type="hidden" id="edit-class-id">
+      <div class="form-group"><label>Tên lớp *</label><input type="text" class="form-control" id="c-name" placeholder="VD: Anh Văn A1, IELTS Nâng cao..."></div>
+      <div class="form-group"><label>Giáo viên phụ trách *</label><input type="text" class="form-control" id="c-teacher" placeholder="Tên giáo viên"></div>
+      <div class="form-grid form-grid-2">
+        <div class="form-group"><label>Học phí/buổi (đồng)</label><input type="number" class="form-control" id="c-rate" placeholder="50000"></div>
+        <div class="form-group"><label>Lịch học</label><input type="text" class="form-control" id="c-schedule" placeholder="VD: T2, T4, T6 - 18:00"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-class')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveClass()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal-overlay" id="modal-payment">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>💳 Ghi nhận thanh toán</h3>
+      <button class="modal-close" onclick="closeModal('modal-payment')">×</button>
+    </div>
+    <div class="form-grid">
+      <input type="hidden" id="pay-student-id">
+      <div class="form-group"><label>Học viên</label><input type="text" class="form-control" id="pay-name" readonly></div>
+      <div class="form-group"><label>Tháng</label><input type="month" class="form-control" id="pay-month" readonly></div>
+      <div class="form-group"><label>Số tiền cần nộp</label><input type="text" class="form-control" id="pay-required" readonly style="background:var(--gray-50)"></div>
+      <div class="form-group"><label>Số tiền nộp lần này</label><input type="number" class="form-control" id="pay-amount" placeholder="0"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-payment')">Hủy</button>
+      <button class="btn btn-success" onclick="savePayment()">✓ Xác nhận thanh toán</button>
+    </div>
+  </div>
+</div>
+
+<!-- API Test Modal -->
+<div class="modal-overlay" id="modal-api-test">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🔎 Test API GET</h3>
+      <button class="modal-close" onclick="closeModal('modal-api-test')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Endpoint URL</label>
+        <input type="text" class="form-control" id="api-test-url" value="http://localhost:3000/api" placeholder="https://example.com/api/endpoint">
+      </div>
+      <div class="form-group">
+        <label>Query Params (JSON)</label>
+        <textarea class="form-control" id="api-test-params" placeholder='{"limit":10}' style="height:70px;font-family:monospace;font-size:13px"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="runApiTest()">🚀 Send GET</button>
+      <div id="api-test-result" style="margin-top:12px;display:none;background:var(--gray-50);padding:10px;border-radius:8px;border:1px solid var(--gray-200);font-family:monospace;font-size:13px;white-space:pre-wrap;max-height:240px;overflow:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-api-test')">Close</button>
+      <button class="btn btn-success" onclick="copyApiResult()">📋 Copy</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+<!-- ════════════════════════════ SCRIPT ════════════════════════════ -->
+<script>
+  const supabaseClient = window.supabase.createClient(
+    "https://vmthdbkpnejquzwinjnd.supabase.co",
+    "sb_publishable_z2BL69bkYGki5wDvagVZGQ_bpFowUVR"
+  );
+// ═══════════════════════════ DATA STORE ═══════════════════════════
+let DB = {
+  classes: [
+    { id: 1, name: 'Anh Văn A1', teacher: 'Cô Lan Anh', rate: 50000, schedule: 'T2, T4, T6 - 18:00' },
+    { id: 2, name: 'IELTS Nâng cao', teacher: 'Thầy Minh Khoa', rate: 80000, schedule: 'T3, T5, T7 - 19:00' },
+    { id: 3, name: 'Tiếng Trung B1', teacher: 'Cô Hương Giang', rate: 60000, schedule: 'T2, T5 - 17:30' },
+  ],
+  students: [
+    { id: 1, name: 'Nguyễn Thị Mai', classId: 1, phone: '0901234567', parentPhone: '0912345678', note: '' },
+    { id: 2, name: 'Trần Văn Hùng', classId: 1, phone: '0902345678', parentPhone: '0923456789', note: '' },
+    { id: 3, name: 'Lê Thị Hoa', classId: 2, phone: '0903456789', parentPhone: '0934567890', note: '' },
+    { id: 4, name: 'Phạm Minh Đức', classId: 2, phone: '0904567890', parentPhone: '0945678901', note: '' },
+    { id: 5, name: 'Hoàng Thị Yến', classId: 3, phone: '0905678901', parentPhone: '0956789012', note: '' },
+  ],
+  teacherAtt: [], // { id, classId, month, sessions: [{date, taught}] }
+  studentAtt: [], // { id, studentId, classId, date, status: 'present'|'absent_excused'|'absent_unexcused' }
+  homework: [],   // { id, studentId, classId, date, btvn: bool, hbc: bool }
+  tuition: [],    // { id, studentId, month, required, paid, note }
+  receipts: [],   // { id, studentId, month, sessions, rate, required, paid, remaining, note, date }
+  nextId: { class: 4, student: 6, receipt: 1 }
+};
+
+// ═══════════════════════════ UTILS ═══════════════════════════
+const $ = id => document.getElementById(id);
+const fmt = n => Number(n||0).toLocaleString('vi-VN') + 'đ';
+const fmtN = n => Number(n||0).toLocaleString('vi-VN');
+const today = () => new Date().toISOString().slice(0,10);
+const thisMonth = () => new Date().toISOString().slice(0,7);
+
+function showToast(msg, type='success') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  setTimeout(() => t.className = '', 2200);
+}
+
+function openModal(id) { $(id).classList.add('open'); }
+function closeModal(id) { $(id).classList.remove('open'); }
+
+function getClass(id) { return DB.classes.find(c => c.id === +id); }
+async function getStudent(id) { 
+
+  return DB.students.find(s => s.id === +id); 
+}
+function getClassName(id) { const c = getClass(id); return c ? c.name : '—'; }
+
+function populateClassSelects() {
+  const selects = ['student-filter-class','s-class','tatt-class-select','satt-class-select',
+    'satt-report-class','hw-class-select','hw-report-class','t-filter-class','rc-student'];
+  selects.forEach(selId => {
+    const el = $(selId);
+    if (!el) return;
+    if (selId === 'rc-student') return;
+    const val = el.value;
+    while (el.options.length > 1) el.remove(1);
+    DB.classes.forEach(c => {
+      const o = new Option(c.name, c.id);
+      el.add(o);
+    });
+    el.value = val;
+  });
+  // rc-student populates with students
+  const rcSel = $('rc-student');
+  if (rcSel) {
+    const val = rcSel.value;
+    while (rcSel.options.length > 1) rcSel.remove(1);
+    DB.students.forEach(s => {
+      const o = new Option(s.name + ' — ' + getClassName(s.classId), s.id);
+      rcSel.add(o);
+    });
+    rcSel.value = val;
+  }
+}
+
+// ═══════════════════════════ NAVIGATION ═══════════════════════════
+const pageTitles = {
+  dashboard: 'Tổng quan', students: 'Học viên', classes: 'Lớp học',
+  'teacher-att': 'Điểm danh Giáo viên', 'student-att': 'Điểm danh Học viên',
+  homework: 'Bài tập & Học bài', tuition: 'Học phí',
+  receipts: 'Phiếu thu', reports: 'Báo cáo Doanh thu'
+};
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    const page = item.dataset.page;
+    $('page-' + page).classList.add('active');
+    $('page-title').textContent = pageTitles[page];
+    if (page === 'dashboard') renderDashboard();
+    if (page === 'students') renderStudents();
+    if (page === 'classes') renderClasses();
+    if (page === 'tuition') { $('t-month').value = thisMonth(); renderTuition(); }
+    if (page === 'receipts') { $('rc-month').value = thisMonth(); filterReceipts(); }
+    if (page === 'reports') { $('rpt-year').value = new Date().getFullYear(); renderReport(); }
+    populateClassSelects();
+  });
+});
+
+function switchAttTab(id, btn) {
+  document.querySelectorAll('#page-student-att .tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#page-student-att .tab-btn').forEach(b => b.classList.remove('active'));
+  $(id).classList.add('active'); btn.classList.add('active');
+}
+function switchHWTab(id, btn) {
+  document.querySelectorAll('#page-homework .tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#page-homework .tab-btn').forEach(b => b.classList.remove('active'));
+  $(id).classList.add('active'); btn.classList.add('active');
+}
+function switchReceiptTab(id, btn) {
+  document.querySelectorAll('#page-receipts .tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#page-receipts .tab-btn').forEach(b => b.classList.remove('active'));
+  $(id).classList.add('active'); btn.classList.add('active');
+}
+
+// ═══════════════════════════ DASHBOARD ═══════════════════════════
+function renderDashboard() {
+  $('dash-students').textContent = DB.students.length;
+  $('dash-classes').textContent = DB.classes.length;
+
+  const month = thisMonth();
+  const monthReceipts = DB.receipts.filter(r => r.month === month);
+  const totalCollected = monthReceipts.reduce((s,r) => s + (r.paid||0), 0);
+  $('dash-collected').textContent = fmt(totalCollected);
+
+  // unpaid students this month
+  const unpaidList = DB.students.filter(s => {
+    const paid = DB.receipts.filter(r => r.studentId === s.id && r.month === month).reduce((a,r) => a + r.paid, 0);
+    const cls = getClass(s.classId);
+    const sessions = getTeacherSessions(s.classId, month);
+    const required = sessions * (cls ? cls.rate : 0);
+    return required > paid;
+  });
+  $('dash-unpaid').textContent = unpaidList.length;
+
+  // absent today
+  const todayAtt = DB.studentAtt.filter(a => a.date === today() && a.status !== 'present');
+  $('dash-absent').textContent = todayAtt.length;
+
+  // unpaid list
+  const tbody = $('dash-unpaid-list');
+  tbody.innerHTML = unpaidList.slice(0,6).map(s => {
+    const cls = getClass(s.classId);
+    const paid = DB.receipts.filter(r => r.studentId === s.id && r.month === month).reduce((a,r) => a + r.paid, 0);
+    const sessions = getTeacherSessions(s.classId, month);
+    const req = sessions * (cls ? cls.rate : 0);
+    return `<tr><td class="fw-600">${s.name}</td><td>${getClassName(s.classId)}</td><td class="badge badge-red">${fmt(req-paid)}</td></tr>`;
+  }).join('') || '<tr><td colspan="3" class="text-muted text-center">Tất cả đã nộp đủ 🎉</td></tr>';
+
+  // chart – last 6 months
+  const chart = $('dash-chart');
+  const months = [];
+  for (let i=5; i>=0; i--) {
+    const d = new Date(); d.setMonth(d.getMonth()-i);
+    months.push(d.toISOString().slice(0,7));
+  }
+  const vals = months.map(m => DB.receipts.filter(r=>r.month===m).reduce((s,r)=>s+r.paid,0));
+  const maxV = Math.max(...vals, 1);
+  chart.innerHTML = months.map((m,i) => {
+    const h = Math.max(4, Math.round((vals[i]/maxV)*120));
+    const lbl = m.slice(5)+'/'+m.slice(2,4);
+    return `<div class="chart-bar-item">
+      <div class="chart-bar-val">${vals[i]>0 ? (vals[i]/1000000).toFixed(1)+'M' : ''}</div>
+      <div class="chart-bar-fill" style="height:${h}px;background:${i===5?'var(--blue)':'var(--blue-mid)'}"></div>
+      <div class="chart-bar-label">${lbl}</div>
+    </div>`;
+  }).join('');
+
+  // classes table
+  const ctbody = $('dash-classes-table');
+  ctbody.innerHTML = DB.classes.map(c => {
+    const count = DB.students.filter(s => s.classId === c.id).length;
+    const sessions = getTeacherSessions(c.id, month);
+    return `<tr><td class="fw-600">${c.name}</td><td>${c.teacher}</td><td>${count}</td><td>${fmt(c.rate)}</td><td>${sessions} buổi</td><td class="fw-600">${fmt(sessions*c.rate)}</td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="text-muted text-center">Chưa có lớp nào</td></tr>';
+}
+
+// ═══════════════════════════ STUDENTS ═══════════════════════════
+async function renderStudents(list) {
+
+  const { data, error } = await supabaseClient
+      .from('students')
+      .select();
+
+  console.log('Fetched students from Supabase:', data, error);
+  
+  if (!list) list = data;
+  const month = thisMonth();
+  const tbody = $('student-table');
+  tbody.innerHTML = list.map((s,i) => {
+    const cls = getClass(s.classId);
+    const paid = DB.receipts.filter(r => r.studentId === s.id && r.month === month).reduce((a,r) => a+r.paid, 0);
+    const sessions = getTeacherSessions(s.classId, month);
+    const req = sessions * (cls ? cls.rate : 0);
+    const diff = req - paid;
+    const badge = req === 0 ? '<span class="badge badge-gray">Chưa có HP</span>'
+      : diff <= 0 ? '<span class="badge badge-green">Đã nộp đủ</span>'
+      : paid > 0 ? `<span class="badge badge-yellow">Còn thiếu ${fmt(diff)}</span>`
+      : `<span class="badge badge-red">Chưa nộp</span>`;
+    return `<tr>
+      <td>${i+1}</td>
+      <td class="fw-600">${s.full_name}</td>
+      <td>${getClassName(s.classId)}</td>
+      <td>${s.personal_phone||'—'}</td>
+      <td>${s.parent_phone||'—'}</td>
+      <td>${badge}</td>
+      <td>
+        <button class="btn btn-outline btn-xs" onclick="openStudentModal(${s.id})">✏️</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteStudent(${s.id})">🗑</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="text-muted text-center">Chưa có học viên nào</td></tr>';
+}
+
+function filterStudents() {
+  const q = $('student-search').value.toLowerCase();
+  const cls = $('student-filter-class').value;
+  let list = DB.students.filter(s =>
+    s.name.toLowerCase().includes(q) &&
+    (cls === '' || s.classId === +cls)
+  );
+  renderStudents(list);
+}
+
+function openStudentModal(id) {
+  $('edit-student-id').value = id || '';
+  $('modal-student-title').textContent = id ? 'Sửa thông tin học viên' : 'Thêm học viên mới';
+  // populate s-class
+  const sel = $('s-class');
+  while (sel.options.length > 1) sel.remove(1);
+  DB.classes.forEach(c => sel.add(new Option(c.name, c.id)));
+
+  if (id) {
+    const s = getStudent(id);
+    $('s-name').value = s.full_name;
+    $('s-class').value = s.classId;
+    $('s-phone').value = s.personal_phone;
+    $('s-parent-phone').value = s.parent_phone;
+    $('s-note').value = s.note;
+  } else {
+    ['s-name','s-phone','s-parent-phone','s-note'].forEach(f => $(f).value = '');
+    $('s-class').value = '';
+  }
+  openModal('modal-student');
+}
+
+function saveStudent() {
+  const name = $('s-name').value.trim();
+  const classId = +$('s-class').value;
+  if (!name || !classId) return showToast('Vui lòng điền đầy đủ thông tin!', 'error');
+  const id = +$('edit-student-id').value;
+  if (id) {
+    const s = getStudent(id);
+    s.name = name; s.classId = classId;
+    s.phone = $('s-phone').value; s.parentPhone = $('s-parent-phone').value; s.note = $('s-note').value;
+    showToast('Đã cập nhật học viên!');
+  } else {
+    DB.students.push({ id: DB.nextId.student++, name, classId, phone: $('s-phone').value, parentPhone: $('s-parent-phone').value, note: $('s-note').value });
+    showToast('Đã thêm học viên mới!');
+  }
+  closeModal('modal-student');
+  renderStudents();
+  populateClassSelects();
+}
+
+function deleteStudent(id) {
+  if (!confirm('Xóa học viên này?')) return;
+  DB.students = DB.students.filter(s => s.id !== id);
+  showToast('Đã xóa học viên');
+  renderStudents();
+}
+
+// ═══════════════════════════ CLASSES ═══════════════════════════
+function renderClasses() {
+  const tbody = $('class-table');
+  tbody.innerHTML = DB.classes.map(c => {
+    const count = DB.students.filter(s => s.classId === c.id).length;
+    return `<tr>
+      <td class="fw-600">${c.name}</td>
+      <td>${c.teacher}</td>
+      <td>${fmt(c.rate)}</td>
+      <td>${c.schedule||'—'}</td>
+      <td>${count} HV</td>
+      <td>
+        <button class="btn btn-outline btn-xs" onclick="openClassModal(${c.id})">✏️</button>
+        <button class="btn btn-danger btn-xs" onclick="deleteClass(${c.id})">🗑</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" class="text-muted text-center">Chưa có lớp nào</td></tr>';
+}
+
+function openClassModal(id) {
+  $('edit-class-id').value = id || '';
+  $('modal-class-title').textContent = id ? 'Sửa lớp học' : 'Thêm lớp học mới';
+  if (id) {
+    const c = getClass(id);
+    $('c-name').value = c.name; $('c-teacher').value = c.teacher;
+    $('c-rate').value = c.rate; $('c-schedule').value = c.schedule;
+  } else {
+    ['c-name','c-teacher','c-rate','c-schedule'].forEach(f => $(f).value = '');
+  }
+  openModal('modal-class');
+}
+
+function saveClass() {
+  const name = $('c-name').value.trim();
+  const teacher = $('c-teacher').value.trim();
+  const rate = +$('c-rate').value;
+  if (!name || !teacher || !rate) return showToast('Vui lòng điền đầy đủ thông tin!', 'error');
+  const id = +$('edit-class-id').value;
+  if (id) {
+    const c = getClass(id);
+    c.name = name; c.teacher = teacher; c.rate = rate; c.schedule = $('c-schedule').value;
+    showToast('Đã cập nhật lớp học!');
+  } else {
+    DB.classes.push({ id: DB.nextId.class++, name, teacher, rate, schedule: $('c-schedule').value });
+    showToast('Đã thêm lớp mới!');
+  }
+  closeModal('modal-class');
+  renderClasses();
+  populateClassSelects();
+}
+
+function deleteClass(id) {
+  if (DB.students.some(s => s.classId === id)) return showToast('Không thể xóa lớp đang có học viên!', 'error');
+  if (!confirm('Xóa lớp này?')) return;
+  DB.classes = DB.classes.filter(c => c.id !== id);
+  showToast('Đã xóa lớp');
+  renderClasses();
+  populateClassSelects();
+}
+
+// ═══════════════════════════ TEACHER ATTENDANCE ═══════════════════════════
+function getTeacherSessions(classId, month) {
+  const rec = DB.teacherAtt.find(t => t.classId === +classId && t.month === month);
+  if (!rec) return 0;
+  return rec.sessions.filter(s => s.taught).length;
+}
+
+function loadTeacherAtt() {
+  const classId = +$('tatt-class-select').value;
+  const month = $('tatt-month').value;
+  if (!classId || !month) return showToast('Chọn lớp và tháng!', 'error');
+  const cls = getClass(classId);
+
+  let rec = DB.teacherAtt.find(t => t.classId === classId && t.month === month);
+  if (!rec) {
+    rec = { classId, month, sessions: [] };
+    DB.teacherAtt.push(rec);
+  }
+
+  // build dates for the month
+  const [y, m] = month.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const existingDates = new Set(rec.sessions.map(s=>s.date));
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = `${month}-${String(d).padStart(2,'0')}`;
+    if (!existingDates.has(date)) rec.sessions.push({ date, taught: false });
+  }
+  rec.sessions.sort((a,b) => a.date.localeCompare(b.date));
+
+  const taught = rec.sessions.filter(s=>s.taught).length;
+  const tuition = taught * cls.rate * DB.students.filter(s=>s.classId===classId).length;
+  $('tatt-total').textContent = taught;
+  $('tatt-tuition').textContent = fmt(tuition);
+
+  $('tatt-content').innerHTML = `
+    <div class="mb-8"><strong>${cls.name}</strong> — GV: ${cls.teacher} — HP/buổi: ${fmt(cls.rate)}</div>
+    <p style="font-size:12px;color:var(--gray-500);margin-bottom:10px">Bấm vào ô ngày để đánh dấu GV có/không dạy. <span style="color:var(--green)">■ Có dạy</span> <span style="color:var(--red)">■ Không dạy</span></p>
+    <div class="att-grid" id="tatt-grid"></div>
+    <div class="mt-16 flex gap-8 items-center">
+      <span class="badge badge-green">✓ Có dạy: ${taught} buổi</span>
+      <span class="badge badge-red">✗ Nghỉ: ${rec.sessions.length-taught} buổi</span>
+      <span class="fw-600" style="color:var(--blue)">Học phí phát sinh: ${fmt(tuition)}</span>
+    </div>
+  `;
+
+  const grid = $('tatt-grid');
+  rec.sessions.forEach(s => {
+    const cell = document.createElement('div');
+    cell.className = `att-cell ${s.taught ? 'present' : 'absent-unexcused'}`;
+    cell.textContent = s.date.slice(8);
+    cell.title = s.date + (s.taught ? ' — Có dạy' : ' — Không dạy');
+    cell.onclick = () => {
+      s.taught = !s.taught;
+      cell.className = `att-cell ${s.taught ? 'present' : 'absent-unexcused'}`;
+      const t2 = rec.sessions.filter(x=>x.taught).length;
+      const tu2 = t2 * cls.rate * DB.students.filter(x=>x.classId===classId).length;
+      $('tatt-total').textContent = t2;
+      $('tatt-tuition').textContent = fmt(tu2);
+      grid.parentElement.querySelector('.mt-16').innerHTML = `
+        <span class="badge badge-green">✓ Có dạy: ${t2} buổi</span>
+        <span class="badge badge-red">✗ Nghỉ: ${rec.sessions.length-t2} buổi</span>
+        <span class="fw-600" style="color:var(--blue)">Học phí phát sinh: ${fmt(tu2)}</span>
+      `;
+    };
+    grid.appendChild(cell);
+  });
+
+  showToast('Đã tải điểm danh giáo viên');
+}
+
+// ═══════════════════════════ STUDENT ATTENDANCE ═══════════════════════════
+function loadStudentAtt() {
+  const classId = +$('satt-class-select').value;
+  const date = $('satt-date').value;
+  if (!classId || !date) return showToast('Chọn lớp và ngày!', 'error');
+  const students = DB.students.filter(s => s.classId === classId);
+  if (!students.length) return showToast('Lớp chưa có học viên!', 'error');
+
+  $('satt-content').innerHTML = `
+    <table>
+      <thead><tr><th>#</th><th>Học viên</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead>
+      <tbody id="satt-tbody"></tbody>
+    </table>
+    <div class="mt-16 flex gap-8">
+      <button class="btn btn-success" onclick="saveStudentAtt(${classId},'${date}')">✓ Lưu điểm danh</button>
+    </div>
+  `;
+
+  const tbody = $('satt-tbody');
+  tbody.innerHTML = students.map((s,i) => {
+    const existing = DB.studentAtt.find(a => a.studentId===s.id && a.date===date);
+    const status = existing ? existing.status : 'present';
+    return `<tr>
+      <td>${i+1}</td>
+      <td class="fw-600">${s.name}</td>
+      <td>
+        <select class="form-control" id="satt-${s.id}" style="width:auto">
+          <option value="present" ${status==='present'?'selected':''}>✓ Có mặt</option>
+          <option value="absent_excused" ${status==='absent_excused'?'selected':''}>📋 Vắng có phép</option>
+          <option value="absent_unexcused" ${status==='absent_unexcused'?'selected':''}>✗ Vắng không phép</option>
+        </select>
+      </td>
+      <td><input type="text" class="form-control" id="satt-note-${s.id}" placeholder="Ghi chú..." style="width:100%"></td>
+    </tr>`;
+  }).join('');
+}
+
+function saveStudentAtt(classId, date) {
+  const students = DB.students.filter(s => s.classId === classId);
+  students.forEach(s => {
+    const status = $('satt-'+s.id)?.value;
+    if (!status) return;
+    const idx = DB.studentAtt.findIndex(a => a.studentId===s.id && a.date===date);
+    if (idx >= 0) DB.studentAtt[idx].status = status;
+    else DB.studentAtt.push({ studentId: s.id, classId, date, status });
+  });
+  showToast('Đã lưu điểm danh!');
+}
+
+function renderAttReport() {
+  const classId = $('satt-report-class').value;
+  const month = $('satt-report-month').value;
+  let students = classId ? DB.students.filter(s => s.classId === +classId) : DB.students;
+  const tbody = $('satt-report-table');
+  const totalSessions = month
+    ? DB.studentAtt.filter(a => a.date.startsWith(month)).map(a=>a.date).filter((v,i,s)=>s.indexOf(v)===i).length
+    : 1;
+
+  tbody.innerHTML = students.map(s => {
+    let atts = DB.studentAtt.filter(a => a.studentId === s.id && (month ? a.date.startsWith(month) : true));
+    const excused = atts.filter(a => a.status==='absent_excused').length;
+    const unexcused = atts.filter(a => a.status==='absent_unexcused').length;
+    const present = atts.filter(a => a.status==='present').length;
+    const total = atts.length;
+    const rate = total > 0 ? Math.round((present/total)*100) : 100;
+    const barColor = rate >= 80 ? 'green' : rate >= 60 ? 'yellow' : 'red';
+    return `<tr>
+      <td class="fw-600">${s.name}</td>
+      <td>${getClassName(s.classId)}</td>
+      <td><span class="badge badge-yellow">${excused}</span></td>
+      <td><span class="badge badge-red">${unexcused}</span></td>
+      <td>${excused+unexcused}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="progress-bar" style="width:80px"><div class="progress-fill ${barColor}" style="width:${rate}%"></div></div>
+          <span style="font-size:12px;font-weight:600">${rate}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" class="text-muted text-center">Không có dữ liệu</td></tr>';
+}
+
+// ═══════════════════════════ HOMEWORK ═══════════════════════════
+function loadHomework() {
+  const classId = +$('hw-class-select').value;
+  const date = $('hw-date').value;
+  if (!classId || !date) return showToast('Chọn lớp và ngày!', 'error');
+  const students = DB.students.filter(s => s.classId === classId);
+  if (!students.length) return showToast('Lớp chưa có học viên!', 'error');
+
+  $('hw-content').innerHTML = `
+    <table>
+      <thead><tr><th>#</th><th>Học viên</th><th>Bài tập về nhà</th><th>Học bài cũ</th></tr></thead>
+      <tbody id="hw-tbody"></tbody>
+    </table>
+    <div class="mt-16">
+      <button class="btn btn-success" onclick="saveHomework(${classId},'${date}')">✓ Lưu</button>
+    </div>
+  `;
+
+  $('hw-tbody').innerHTML = students.map((s,i) => {
+    const existing = DB.homework.find(h => h.studentId===s.id && h.date===date);
+    return `<tr>
+      <td>${i+1}</td>
+      <td class="fw-600">${s.name}</td>
+      <td>
+        <select class="form-control" id="hw-btvn-${s.id}" style="width:auto">
+          <option value="done" ${(!existing||existing.btvn)?'selected':''}>✓ Hoàn thành</option>
+          <option value="notdone" ${(existing&&!existing.btvn)?'selected':''}>✗ Không hoàn thành</option>
+        </select>
+      </td>
+      <td>
+        <select class="form-control" id="hw-hbc-${s.id}" style="width:auto">
+          <option value="done" ${(!existing||existing.hbc)?'selected':''}>✓ Thuộc bài</option>
+          <option value="notdone" ${(existing&&!existing.hbc)?'selected':''}>✗ Chưa thuộc</option>
+        </select>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function saveHomework(classId, date) {
+  const students = DB.students.filter(s => s.classId === classId);
+  students.forEach(s => {
+    const btvn = $('hw-btvn-'+s.id)?.value === 'done';
+    const hbc = $('hw-hbc-'+s.id)?.value === 'done';
+    const idx = DB.homework.findIndex(h => h.studentId===s.id && h.date===date);
+    if (idx >= 0) { DB.homework[idx].btvn = btvn; DB.homework[idx].hbc = hbc; }
+    else DB.homework.push({ studentId: s.id, classId, date, btvn, hbc });
+  });
+  showToast('Đã lưu ghi nhận bài tập!');
+}
+
+function renderHWReport() {
+  const classId = $('hw-report-class').value;
+  const period = $('hw-report-period').value;
+  let students = classId ? DB.students.filter(s => s.classId === +classId) : DB.students;
+
+  let dateFilter = () => true;
+  const now = new Date();
+  if (period === 'week') {
+    const weekAgo = new Date(now - 7*24*3600*1000).toISOString().slice(0,10);
+    dateFilter = d => d >= weekAgo;
+  } else {
+    const semStart = now.getMonth() < 6 ? `${now.getFullYear()}-01-01` : `${now.getFullYear()}-07-01`;
+    dateFilter = d => d >= semStart;
+  }
+
+  $('hw-report-body').innerHTML = `
+    <table>
+      <thead><tr><th>Học viên</th><th>Lớp</th><th>BTVN đạt</th><th>BTVN không đạt</th><th>Tỉ lệ BTVN</th><th>Học bài đạt</th><th>Học bài không đạt</th><th>Tỉ lệ học bài</th></tr></thead>
+      <tbody>${students.map(s => {
+        const records = DB.homework.filter(h => h.studentId===s.id && dateFilter(h.date));
+        const btvnDone = records.filter(h=>h.btvn).length;
+        const hbcDone = records.filter(h=>h.hbc).length;
+        const total = records.length;
+        const rBtvn = total>0 ? Math.round(btvnDone/total*100) : 0;
+        const rHbc = total>0 ? Math.round(hbcDone/total*100) : 0;
+        const bar = (r) => `<div style="display:flex;align-items:center;gap:6px">
+          <div class="progress-bar" style="width:60px"><div class="progress-fill ${r>=80?'green':r>=60?'yellow':'red'}" style="width:${r}%"></div></div>
+          <span style="font-size:11px;font-weight:600">${r}%</span></div>`;
+        return `<tr>
+          <td class="fw-600">${s.name}</td><td>${getClassName(s.classId)}</td>
+          <td><span class="badge badge-green">${btvnDone}</span></td>
+          <td><span class="badge badge-red">${total-btvnDone}</span></td>
+          <td>${bar(rBtvn)}</td>
+          <td><span class="badge badge-green">${hbcDone}</span></td>
+          <td><span class="badge badge-red">${total-hbcDone}</span></td>
+          <td>${bar(rHbc)}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="8" class="text-muted text-center">Chưa có dữ liệu ghi nhận</td></tr>'}</tbody>
+    </table>
+  `;
+}
+
+// ═══════════════════════════ TUITION ═══════════════════════════
+function renderTuition() {
+  const month = $('t-month').value || thisMonth();
+  const classFilter = $('t-filter-class').value;
+  const statusFilter = $('t-filter-status').value;
+
+  let students = DB.students.filter(s => !classFilter || s.classId === +classFilter);
+
+  let paid=0, unpaid=0, totalPaid=0, totalOwed=0;
+  const rows = students.map(s => {
+    const cls = getClass(s.classId);
+    const sessions = getTeacherSessions(s.classId, month);
+    const required = sessions * (cls ? cls.rate : 0);
+    const paidAmt = DB.receipts.filter(r => r.studentId===s.id && r.month===month).reduce((a,r)=>a+r.paid,0);
+    const remaining = Math.max(0, required - paidAmt);
+    const status = required === 0 ? 'no-data'
+      : remaining <= 0 ? 'paid'
+      : paidAmt > 0 ? 'partial' : 'unpaid';
+
+    if (statusFilter && status !== statusFilter) return null;
+
+    if (status === 'paid') paid++;
+    else if (status !== 'no-data') unpaid++;
+    totalPaid += paidAmt;
+    totalOwed += remaining;
+
+    const badge = status==='paid' ? '<span class="badge badge-green">Đã nộp đủ</span>'
+      : status==='partial' ? '<span class="badge badge-yellow">Nộp một phần</span>'
+      : status==='unpaid' ? '<span class="badge badge-red">Chưa nộp</span>'
+      : '<span class="badge badge-gray">Chưa có HP</span>';
+
+    return `<tr>
+      <td class="fw-600">${s.name}</td>
+      <td>${getClassName(s.classId)}</td>
+      <td>${sessions}</td>
+      <td>${cls?fmt(cls.rate):'—'}</td>
+      <td class="fw-600">${fmt(required)}</td>
+      <td style="color:var(--green)">${fmt(paidAmt)}</td>
+      <td style="color:var(--red);font-weight:${remaining>0?600:400}">${remaining>0?fmt(remaining):'—'}</td>
+      <td>${badge}</td>
+      <td>${required>0&&remaining>0 ? `<button class="btn btn-success btn-xs" onclick="openPaymentModal(${s.id},'${month}',${required})">💳 Thu tiền</button>` : ''}</td>
+    </tr>`;
+  }).filter(Boolean);
+
+  $('t-paid').textContent = paid;
+  $('t-unpaid').textContent = unpaid;
+  $('t-total').textContent = fmt(totalPaid);
+  $('t-owed').textContent = fmt(totalOwed);
+  $('tuition-table').innerHTML = rows.join('') || '<tr><td colspan="9" class="text-muted text-center">Không có dữ liệu</td></tr>';
+}
+
+function openPaymentModal(studentId, month, required) {
+  const s = getStudent(studentId);
+  const paid = DB.receipts.filter(r=>r.studentId===studentId&&r.month===month).reduce((a,r)=>a+r.paid,0);
+  $('pay-student-id').value = studentId;
+  $('pay-name').value = s.name;
+  $('pay-month').value = month;
+  $('pay-required').value = fmt(required - paid) + ' (còn thiếu)';
+  $('pay-amount').value = '';
+  openModal('modal-payment');
+}
+
+function savePayment() {
+  const studentId = +$('pay-student-id').value;
+  const month = $('pay-month').value;
+  const amount = +$('pay-amount').value;
+  if (!amount || amount <= 0) return showToast('Nhập số tiền hợp lệ!', 'error');
+  const s = getStudent(studentId);
+  const cls = getClass(s.classId);
+  const sessions = getTeacherSessions(s.classId, month);
+  const required = sessions * (cls ? cls.rate : 0);
+  const prevPaid = DB.receipts.filter(r=>r.studentId===studentId&&r.month===month).reduce((a,r)=>a+r.paid,0);
+  const remaining = Math.max(0, required - prevPaid - amount);
+
+  DB.receipts.push({
+    id: DB.nextId.receipt++,
+    studentId, month, sessions, rate: cls?cls.rate:0,
+    required, paid: amount, remaining,
+    note: '', date: today()
+  });
+
+  closeModal('modal-payment');
+  showToast(`Đã ghi nhận thanh toán ${fmt(amount)} từ ${s.name}`);
+  renderTuition();
+  filterReceipts();
+}
+
+// ═══════════════════════════ RECEIPTS ═══════════════════════════
+function fillReceiptInfo() {
+  const studentId = +$('rc-student').value;
+  if (!studentId) return;
+  const s = getStudent(studentId);
+  const cls = getClass(s.classId);
+  $('rc-class').value = cls ? cls.name : '—';
+  $('rc-rate').value = cls ? cls.rate : 0;
+  const month = $('rc-month').value || thisMonth();
+  $('rc-month').value = month;
+  $('rc-sessions').value = getTeacherSessions(s.classId, month);
+  calcReceipt();
+  renderReceiptPreview();
+}
+
+function calcReceipt() {
+  const sessions = +$('rc-sessions').value || 0;
+  const rate = +$('rc-rate').value || 0;
+  const required = sessions * rate;
+  const paid = +$('rc-paid').value || 0;
+  $('rc-required').value = required;
+  $('rc-remaining').value = Math.max(0, required - paid);
+  renderReceiptPreview();
+}
+
+function renderReceiptPreview() {
+  const studentId = +$('rc-student').value;
+  if (!studentId) return;
+  const s = getStudent(studentId);
+  const sessions = +$('rc-sessions').value || 0;
+  const rate = +$('rc-rate').value || 0;
+  const required = sessions * rate;
+  const paid = +$('rc-paid').value || 0;
+  const remaining = Math.max(0, required - paid);
+  const month = $('rc-month').value || thisMonth();
+
+  $('receipt-preview').innerHTML = `
+    <div class="receipt">
+      <div class="receipt-header">
+        <h2>EduCenter</h2>
+        <p>Phiếu Thu Học Phí</p>
+        <p style="margin-top:4px;font-size:11px">Ngày lập: ${today()}</p>
+      </div>
+      <div class="receipt-row"><span>Học viên:</span><span class="fw-600">${s.name}</span></div>
+      <div class="receipt-row"><span>Lớp:</span><span>${$('rc-class').value}</span></div>
+      <div class="receipt-row"><span>Tháng học phí:</span><span>${month}</span></div>
+      <div class="receipt-row"><span>Số buổi học:</span><span>${sessions} buổi</span></div>
+      <div class="receipt-row"><span>Học phí/buổi:</span><span>${fmt(rate)}</span></div>
+      <div class="receipt-row total"><span>Học phí phải nộp:</span><span style="color:var(--blue)">${fmt(required)}</span></div>
+      <div class="receipt-row"><span>Số tiền đã nộp:</span><span style="color:var(--green)">${fmt(paid)}</span></div>
+      <div class="receipt-row" style="font-weight:600;color:var(--red)"><span>Còn thiếu:</span><span>${fmt(remaining)}</span></div>
+      ${$('rc-note').value ? `<div class="receipt-row" style="color:var(--gray-500)"><span>Ghi chú:</span><span>${$('rc-note').value}</span></div>` : ''}
+      <div style="margin-top:16px;text-align:center;font-size:11px;color:var(--gray-400)">Xin cảm ơn quý phụ huynh!</div>
+    </div>
+  `;
+}
+
+function createReceipt() {
+  const studentId = +$('rc-student').value;
+  const month = $('rc-month').value;
+  if (!studentId || !month) return showToast('Vui lòng điền đầy đủ thông tin!', 'error');
+  const sessions = +$('rc-sessions').value || 0;
+  const rate = +$('rc-rate').value || 0;
+  const required = sessions * rate;
+  const paid = +$('rc-paid').value || 0;
+
+  DB.receipts.push({
+    id: DB.nextId.receipt++,
+    studentId, month, sessions, rate, required, paid,
+    remaining: Math.max(0, required-paid),
+    note: $('rc-note').value, date: today()
+  });
+
+  showToast('Đã lập phiếu thu thành công!');
+  filterReceipts();
+  renderTuition();
+  $('rc-paid').value = '';
+  $('rc-note').value = '';
+  calcReceipt();
+}
+
+function filterReceipts() {
+  const q = ($('rc-search')?.value||'').toLowerCase();
+  const month = $('rc-filter-month')?.value || '';
+  const list = DB.receipts.filter(r => {
+    const s = getStudent(r.studentId);
+    return s && s.name.toLowerCase().includes(q) && (!month || r.month === month);
+  }).sort((a,b) => b.date.localeCompare(a.date));
+
+  $('receipt-table').innerHTML = list.map(r => {
+    const s = getStudent(r.studentId);
+    return `<tr>
+      <td class="badge badge-blue">#${String(r.id).padStart(4,'0')}</td>
+      <td>${r.date}</td>
+      <td class="fw-600">${s?s.name:'—'}</td>
+      <td>${s?getClassName(s.classId):'—'}</td>
+      <td>${r.month}</td>
+      <td>${fmt(r.required)}</td>
+      <td style="color:var(--green)">${fmt(r.paid)}</td>
+      <td style="color:${r.remaining>0?'var(--red)':'var(--gray-400)'}">${r.remaining>0?fmt(r.remaining):'Đủ'}</td>
+      <td style="color:var(--gray-500)">${r.note||'—'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" class="text-muted text-center">Chưa có phiếu thu</td></tr>';
+}
+
+// ═══════════════════════════ REPORTS ═══════════════════════════
+function renderReport() {
+  const year = +$('rpt-year').value || new Date().getFullYear();
+  const months = Array.from({length:12}, (_,i) => `${year}-${String(i+1).padStart(2,'0')}`);
+  const monthNames = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
+
+  const data = months.map((m,i) => {
+    const receipts = DB.receipts.filter(r => r.month === m);
+    const revenue = receipts.reduce((s,r) => s+r.paid, 0);
+    const debtors = new Set(receipts.filter(r=>r.remaining>0).map(r=>r.studentId));
+    const paidFull = new Set(receipts.filter(r=>r.remaining<=0).map(r=>r.studentId));
+    const totalOwed = receipts.reduce((s,r)=>s+r.remaining,0);
+    return { month: m, label: monthNames[i], count: receipts.length, revenue, paidFull: paidFull.size, debtors: debtors.size, totalOwed };
+  });
+
+  const maxRev = Math.max(...data.map(d=>d.revenue), 1);
+  $('report-chart').innerHTML = data.map(d => {
+    const h = Math.max(4, Math.round((d.revenue/maxRev)*160));
+    return `<div class="chart-bar-item">
+      <div class="chart-bar-val" style="font-size:9px">${d.revenue>0?(d.revenue/1000000).toFixed(1)+'M':''}</div>
+      <div class="chart-bar-fill" style="height:${h}px"></div>
+      <div class="chart-bar-label">${d.label}</div>
+    </div>`;
+  }).join('');
+
+  $('report-table').innerHTML = data.map(d => `<tr>
+    <td class="fw-600">${d.label}/${year}</td>
+    <td>${d.count}</td>
+    <td style="color:var(--green);font-weight:600">${fmt(d.revenue)}</td>
+    <td><span class="badge badge-green">${d.paidFull}</span></td>
+    <td><span class="badge badge-red">${d.debtors}</span></td>
+    <td style="color:var(--red)">${d.totalOwed>0?fmt(d.totalOwed):'—'}</td>
+  </tr>`).join('');
+}
+
+function exportReport() {
+  const year = +$('rpt-year').value || new Date().getFullYear();
+  const months = Array.from({length:12}, (_,i) => `${year}-${String(i+1).padStart(2,'0')}`);
+  const lines = ['Tháng,Số phiếu thu,Doanh thu,HV nộp đủ,HV còn nợ,Tiền còn nợ'];
+  months.forEach((m,i) => {
+    const receipts = DB.receipts.filter(r => r.month === m);
+    const revenue = receipts.reduce((s,r)=>s+r.paid,0);
+    const debtors = new Set(receipts.filter(r=>r.remaining>0).map(r=>r.studentId));
+    const paidFull = new Set(receipts.filter(r=>r.remaining<=0).map(r=>r.studentId));
+    const totalOwed = receipts.reduce((s,r)=>s+r.remaining,0);
+    lines.push(`T${i+1}/${year},${receipts.length},${revenue},${paidFull.size},${debtors.size},${totalOwed}`);
+  });
+  const blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `bao-cao-doanh-thu-${year}.csv`;
+  a.click();
+  showToast('Đã xuất báo cáo CSV!');
+}
+
+// ═══════════════════════════ INIT ═══════════════════════════
+function init() {
+  // Set date defaults
+  $('topbar-date').textContent = new Date().toLocaleDateString('vi-VN', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  $('satt-date').value = today();
+  $('hw-date').value = today();
+  $('tatt-month').value = thisMonth();
+  $('satt-report-month').value = thisMonth();
+  $('t-month').value = thisMonth();
+  $('rc-month').value = thisMonth();
+  $('rpt-year').value = new Date().getFullYear();
+
+  // Seed some demo data
+  DB.teacherAtt.push({ classId:1, month: thisMonth(), sessions: [
+    {date:thisMonth()+'-01', taught:true},{date:thisMonth()+'-03', taught:true},{date:thisMonth()+'-05', taught:true},
+    {date:thisMonth()+'-08', taught:true},{date:thisMonth()+'-10', taught:false},{date:thisMonth()+'-12', taught:true},
+    {date:thisMonth()+'-15', taught:true},{date:thisMonth()+'-17', taught:true},
+  ]});
+  DB.teacherAtt.push({ classId:2, month: thisMonth(), sessions: [
+    {date:thisMonth()+'-02', taught:true},{date:thisMonth()+'-04', taught:true},{date:thisMonth()+'-07', taught:true},
+    {date:thisMonth()+'-09', taught:true},{date:thisMonth()+'-11', taught:true},{date:thisMonth()+'-14', taught:false},
+  ]});
+  DB.teacherAtt.push({ classId:3, month: thisMonth(), sessions: [
+    {date:thisMonth()+'-01', taught:true},{date:thisMonth()+'-06', taught:true},{date:thisMonth()+'-08', taught:true},
+    {date:thisMonth()+'-13', taught:true},
+  ]});
+
+  // Some receipts
+  const m = thisMonth();
+  DB.receipts.push({ id: DB.nextId.receipt++, studentId:1, month:m, sessions:7, rate:50000, required:350000, paid:350000, remaining:0, note:'', date:today() });
+  DB.receipts.push({ id: DB.nextId.receipt++, studentId:2, month:m, sessions:7, rate:50000, required:350000, paid:200000, remaining:150000, note:'Nộp thêm sau', date:today() });
+  DB.receipts.push({ id: DB.nextId.receipt++, studentId:3, month:m, sessions:5, rate:80000, required:400000, paid:400000, remaining:0, note:'', date:today() });
+
+  // Some attendance
+  DB.studentAtt.push({ studentId:2, classId:1, date:today(), status:'absent_unexcused' });
+  DB.studentAtt.push({ studentId:4, classId:2, date:today(), status:'absent_excused' });
+
+  // Some homework
+  ['01','03','05','08'].forEach(d => {
+    DB.homework.push({ studentId:1, classId:1, date:thisMonth()+'-'+d, btvn:true, hbc:true });
+    DB.homework.push({ studentId:2, classId:1, date:thisMonth()+'-'+d, btvn:Math.random()>0.3, hbc:Math.random()>0.3 });
+  });
+
+  populateClassSelects();
+  renderDashboard();
+
+  // call API
+}
+
+async function runApiTest() {
+  // const supabase = window.supabase.createClient(
+  //   "https://vmthdbkpnejquzwinjnd.supabase.co",
+  //   "sb_publishable_z2BL69bkYGki5wDvagVZGQ_bpFowUVR"
+  // );
+  const url = $('api-test-url').value.trim();
+  const paramsStr = $('api-test-params').value.trim();
+  if (!url) { showToast('Vui lòng nhập URL', 'error'); return; }
+  let params;
+  if (paramsStr) {
+    try { params = JSON.parse(paramsStr); } catch (e) { showToast('Tham số không hợp lệ', 'error'); return; }
+  }
+  const resultEl = $('api-test-result');
+  resultEl.style.display = 'block';
+  resultEl.textContent = '⏳ Đang tải...';
+  try {
+    const fetchFn = window.apiGet ? window.apiGet : window.apiRequest;
+    // const data = await fetchFn(url, { params, timeoutMs: 15000 });
+    // resultEl.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    // resultEl.style.color = 'var(--gray-800)';
+    // showToast('Gọi API thành công');
+
+    // const { data, error } = await supabase
+    //   .from('students')
+    //   .select();
+
+    // console.log('Supabase API response:', { data, error });
+  } catch (err) {
+    const body = err && err.data ? JSON.stringify(err.data, null, 2) : (err.message || String(err));
+    resultEl.textContent = `Lỗi: ${err.message || err}\n${body}`;
+    resultEl.style.color = 'var(--red)';
+    showToast('Gọi API thất bại', 'error');
+  }
+}
+
+function copyApiResult() {
+  const txt = $('api-test-result').textContent || '';
+  if (!txt) { showToast('Không có kết quả để sao chép', 'error'); return; }
+  navigator.clipboard.writeText(txt).then(() => showToast('Đã sao chép')).catch(()=>showToast('Sao chép thất bại','error'));
+}
+
+init();
+</script>
+<script type="module">
+  import apiRequest, { get as apiGet } from './api.js';
+  // expose to non-module scripts
+  window.apiRequest = apiRequest;
+  window.apiGet = apiGet;
+</script>
+
+</body>
+</html>
