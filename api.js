@@ -1,7 +1,26 @@
 // Reusable fetch wrapper: apiRequest
 // - Default baseUrl: https://vmthdbkpnejquzwinjnd.supabase.co/rest/v1/
 // - Supports: query params, JSON body, FormData, timeout, retries, Authorization
-const DEFAULT_BASE_URL = 'https://vmthdbkpnejquzwinjnd.supabase.co/rest/v1/';
+const DEFAULT_BASE_URL = 'https://vmthdbkpnejquzwinjnd.supabase.co';
+
+function extractErrorMessage(data) {
+  if (!data) return '';
+  if (typeof data === 'string') return data;
+  if (typeof data !== 'object') return '';
+
+  if (typeof data.error === 'string' && data.error.trim()) return data.error;
+  if (typeof data.message === 'string' && data.message.trim()) return data.message;
+  if (typeof data.msg === 'string' && data.msg.trim()) return data.msg;
+  if (typeof data.detail === 'string' && data.detail.trim()) return data.detail;
+
+  if (Array.isArray(data.errors) && data.errors.length > 0) {
+    const first = data.errors[0];
+    if (typeof first === 'string' && first.trim()) return first;
+    if (typeof first?.message === 'string' && first.message.trim()) return first.message;
+  }
+
+  return '';
+}
 
 export async function apiRequest(path, options = {}) {
   const {
@@ -70,6 +89,8 @@ export async function apiRequest(path, options = {}) {
       err.status = response.status;
       err.statusText = response.statusText;
       err.data = data;
+      const backendMessage = extractErrorMessage(data);
+      if (backendMessage) err.message = backendMessage;
       throw err;
     }
 
@@ -90,7 +111,16 @@ if (typeof window !== 'undefined') window.apiRequest = apiRequest;
 export async function get(url, options = {}) {
   return apiRequest(url, { ...options, method: 'GET' });
 }
+export async function post(url, options = {}) {
+  return apiRequest(url, { ...options, method: 'POST' });
+}
 
-if (typeof window !== 'undefined') window.apiGet = get;
+export async function put(url, options = {}) {
+  return apiRequest(url, { ...options, method: 'PUT' });
+}
+
+export async function del(url, options = {}) {
+  return apiRequest(url, { ...options, method: 'DELETE' });
+}
 
 export default apiRequest;
