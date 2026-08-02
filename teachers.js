@@ -1,6 +1,7 @@
-import { $, fmt, getListClasses, getTeachersByClassAndMonth, getStudentsByClass, updateTeacherCheckin, showToast } from './common.js';
+import { $, fmt, getListClasses, getTeachersByClassAndMonth, getStudentsByClass, updateTeacherCheckin, createTeacher, openModal, closeModal, showToast } from './common.js';
 
 let teacherAttendanceState = null;
+let isCreatingTeacher = false;
 
 function getClassIdValue(cls) {
   return Number(cls?.classId ?? cls?.id ?? cls?.class_id ?? 0);
@@ -171,5 +172,38 @@ async function saveTeacherAtt() {
   }
 }
 
-Object.assign(window, { loadTeacherAtt, saveTeacherAtt, toggleTeacherAttDate: toggleTeacherDate });
-export { loadTeacherAtt, saveTeacherAtt };
+function openTeacherCreateModal() {
+  if ($('tadd-name')) $('tadd-name').value = '';
+  if ($('tadd-phone')) $('tadd-phone').value = '';
+  openModal('modal-teacher-create');
+}
+
+async function saveTeacherFromAttendance() {
+  if (isCreatingTeacher) return;
+
+  const fullName = $('tadd-name')?.value?.trim() || '';
+  const phoneNumber = $('tadd-phone')?.value?.trim() || '';
+
+  if (!fullName) {
+    showToast('Vui lòng điền họ tên giáo viên!', 'error');
+    return;
+  }
+
+  isCreatingTeacher = true;
+
+  try {
+    await createTeacher({
+      fullName,
+      phoneNumber: phoneNumber || undefined,
+    });
+    closeModal('modal-teacher-create');
+    showToast('Đã thêm giáo viên mới!');
+  } catch (err) {
+    showToast(err?.message || 'Không thể thêm giáo viên', 'error');
+  } finally {
+    isCreatingTeacher = false;
+  }
+}
+
+Object.assign(window, { loadTeacherAtt, saveTeacherAtt, toggleTeacherAttDate: toggleTeacherDate, openTeacherCreateModal, saveTeacherFromAttendance });
+export { loadTeacherAtt, saveTeacherAtt, openTeacherCreateModal, saveTeacherFromAttendance };

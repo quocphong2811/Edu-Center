@@ -83,6 +83,7 @@ export function switchReceiptTab(id, btn) {
 function init() {
   if ($('satt-month')) $('satt-month').value = thisMonth();
   $('hw-date').value = today();
+  if ($('hw-report-month')) $('hw-report-month').value = thisMonth();
   $('tatt-month').value = thisMonth();
   $('t-month').value = thisMonth();
   if ($('rc-filter-month')) $('rc-filter-month').value = thisMonth();

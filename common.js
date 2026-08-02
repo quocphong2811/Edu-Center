@@ -106,6 +106,18 @@ export async function getListTeachers(options = {}) {
   return res;
 }
 
+export async function createTeacher(teacher) {
+  const res = await apiPost(`/functions/v1/create-teacher`, {
+    headers: {
+      apikey: SUPABASE_KEY,
+    },
+    body: { ...teacher },
+  });
+  if (!res) throw new Error('Failed to create teacher', res);
+
+  return res;
+}
+
 export async function createClass(classData) {
   const res = await apiPost(`/functions/v1/create-class`, {
     headers: {
@@ -262,6 +274,29 @@ export async function updateStudentCheckin(payload) {
     body: payload,
   });
   if (!res) throw new Error('Failed to update student attendance', res);
+
+  return res;
+}
+
+export async function getStudentsHomework(classId, month) {
+  const res = await apiGet(`/functions/v1/get-students-homework?classId=${classId}&month=${month}`, {
+    headers: {
+      apikey: SUPABASE_KEY,
+    },
+  });
+  if (!res) throw new Error('Failed to fetch students homework', res);
+
+  return res;
+}
+
+export async function updateStudentsHomework(payload) {
+  const res = await apiPut(`/functions/v1/update-students-homework`, {
+    headers: {
+      apikey: SUPABASE_KEY,
+    },
+    body: payload,
+  });
+  if (!res) throw new Error('Failed to update students homework', res);
 
   return res;
 }
@@ -563,6 +598,8 @@ Object.assign(window, {
   updateTeacherCheckin,
   getStudentsCheckin,
   updateStudentCheckin,
+  getStudentsHomework,
+  updateStudentsHomework,
   getStudentAbsenceReport,
   normalizeTuitionRows,
   normalizeTuitionStatus,

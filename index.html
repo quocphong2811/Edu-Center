@@ -364,9 +364,8 @@
 <!-- ════════════════════════════ SIDEBAR ════════════════════════════ -->
 <nav id="sidebar">
   <div class="sidebar-logo">
-    <div class="logo-badge">EDUC</div>
-    <h1>EduCenter</h1>
-    <p>Quản lý Trung tâm Ngoại ngữ</p>
+    <div class="logo-badge">EDUCENTER</div>
+    <h1>Quản lý Trung tâm Ngoại ngữ</h1>
   </div>
   <div class="sidebar-nav">
     <div class="nav-section-label">Tổng quan</div>
@@ -375,8 +374,8 @@
     <div class="nav-section-label">Quản lý</div>
     <div class="nav-item" data-page="students"><span class="icon">👤</span> Học viên</div>
     <div class="nav-item" data-page="classes"><span class="icon">🏫</span> Lớp học</div>
-    <div class="nav-item" data-page="teacher-att"><span class="icon">📋</span> Điểm danh GV</div>
-    <div class="nav-item" data-page="student-att"><span class="icon">✅</span> Điểm danh HV</div>
+    <div class="nav-item" data-page="teacher-att"><span class="icon">📋</span> Quản lý giáo viên</div>
+    <div class="nav-item" data-page="student-att"><span class="icon">✅</span> Điểm danh học viên</div>
     <div class="nav-item" data-page="homework"><span class="icon">📚</span> Bài tập & Học bài</div>
 
     <div class="nav-section-label">Tài chính</div>
@@ -385,7 +384,7 @@
     <div class="nav-item" data-page="reports"><span class="icon">📊</span> Báo cáo doanh thu</div>
   </div>
   <div class="sidebar-footer">
-    EduCenter v1.0 • 2025
+    EduCenter v1.0 • Produced by Manh Nguyen
   </div>
 </nav>
 
@@ -486,6 +485,7 @@
             <input type="month" class="form-control" id="tatt-month">
             <button class="btn btn-primary" onclick="loadTeacherAtt()">Xem</button>
             <button class="btn btn-success" onclick="saveTeacherAtt()">Lưu điểm danh</button>
+            <button class="btn btn-outline" onclick="openTeacherCreateModal()">＋ Thêm giáo viên</button>
           </div>
         </div>
         <div class="card-body" id="tatt-content">
@@ -540,15 +540,12 @@
             <h3>📈 Báo cáo tỉ lệ hoàn thành</h3>
             <div class="flex gap-8 flex-wrap">
               <select class="form-control" id="hw-report-class"><option value="">— Tất cả lớp —</option></select>
-              <select class="form-control" id="hw-report-period">
-                <option value="week">Theo tuần</option>
-                <option value="semester">Theo học kì</option>
-              </select>
+              <input type="month" class="form-control" id="hw-report-month">
               <button class="btn btn-outline" onclick="renderHWReport()">Xem báo cáo</button>
             </div>
           </div>
           <div class="card-body" id="hw-report-body">
-            <p class="text-muted text-center">Chọn lớp và kỳ để xem báo cáo.</p>
+            <p class="text-muted text-center">Chọn lớp và tháng để xem báo cáo.</p>
           </div>
         </div>
       </div>
@@ -687,6 +684,24 @@
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-class')">Hủy</button>
       <button class="btn btn-primary" onclick="saveClass()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Teacher Create Modal -->
+<div class="modal-overlay" id="modal-teacher-create">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3>Thêm giáo viên mới</h3>
+      <button class="modal-close" onclick="closeModal('modal-teacher-create')">×</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Họ và tên *</label><input type="text" class="form-control" id="tadd-name" placeholder="Nguyễn Văn B"></div>
+      <div class="form-group"><label>Số điện thoại</label><input type="text" class="form-control" id="tadd-phone" placeholder="09xx..."></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-teacher-create')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveTeacherFromAttendance()">Lưu</button>
     </div>
   </div>
 </div>
