@@ -1,5 +1,10 @@
 import { $, fmt, populateClassSelects, showToast, openModal, closeModal, getListClasses, getClassById, getListTeachers, getListStudents, createClass, updateClass } from './common.js';
 
+let renderedClassesCache = [];
+let activeClassTeacherTooltipId = null;
+const classTeacherNamesByClassId = new Map();
+let hasClassTeacherTooltipOutsideClickListener = false;
+
 function getClassIdValue(cls) {
   return Number(cls?.classId ?? cls?.id ?? cls?.class_id ?? 0);
 }
@@ -90,6 +95,89 @@ function getClassTeacherDisplay(cls) {
   return '—';
 }
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function getClassTeacherNames(cls) {
+  if (Array.isArray(cls?.teachers) && cls.teachers.length) {
+    const names = cls.teachers
+      .map((teacher) => getTeacherNameValue(teacher))
+      .filter((name) => typeof name === 'string' && name.trim())
+      .map((name) => name.trim());
+    if (names.length) return names;
+  }
+
+  if (typeof cls?.teacherFullName === 'string' && cls.teacherFullName.trim()) {
+    return cls.teacherFullName
+      .split(',')
+      .map((name) => name.trim())
+      .filter(Boolean);
+  }
+
+  if (typeof cls?.teacher === 'string' && cls.teacher.trim()) {
+    return cls.teacher
+      .split(',')
+      .map((name) => name.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function ensureClassTeacherTooltipOutsideClickListener() {
+  if (hasClassTeacherTooltipOutsideClickListener) return;
+
+  document.addEventListener('click', (event) => {
+    if (activeClassTeacherTooltipId == null) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest('.class-teacher-tooltip-wrap')) return;
+
+    activeClassTeacherTooltipId = null;
+    renderClasses(renderedClassesCache);
+  });
+
+  hasClassTeacherTooltipOutsideClickListener = true;
+}
+
+function renderClassTeacherCell(cls) {
+  const classId = getClassIdValue(cls);
+  const teacherNames = getClassTeacherNames(cls);
+  classTeacherNamesByClassId.set(classId, teacherNames);
+
+  if (!teacherNames.length) return '—';
+  if (teacherNames.length === 1) return escapeHtml(teacherNames[0]);
+
+  const tooltipItems = teacherNames
+    .map((teacherName) => `<li>${escapeHtml(teacherName)}</li>`)
+    .join('');
+  const isOpen = activeClassTeacherTooltipId === classId ? ' open' : '';
+
+  return `
+    <div class="class-teacher-tooltip-wrap">
+      <button type="button" class="class-teacher-trigger" onclick="toggleClassTeacherTooltip(${classId}, event)">Nhiều giáo viên</button>
+      <div class="class-teacher-tooltip${isOpen}">
+        <ul>${tooltipItems}</ul>
+      </div>
+    </div>
+  `;
+}
+
+function toggleClassTeacherTooltip(classId, event) {
+  event?.stopPropagation?.();
+  const id = Number(classId || 0);
+  const teacherNames = classTeacherNamesByClassId.get(id) || [];
+  if (teacherNames.length <= 1) return;
+
+  activeClassTeacherTooltipId = activeClassTeacherTooltipId === id ? null : id;
+  renderClasses(renderedClassesCache);
+}
+
 async function populateClassTeacherMultiSelect(selectedTeacherIds = []) {
   const selectEl = $('c-teachers');
   if (!selectEl) return;
@@ -147,13 +235,18 @@ async function findClassForEdit(id) {
   }
 }
 
-async function renderClasses() {
-  const classes = await getListClasses();
+async function renderClasses(existingClasses) {
+  ensureClassTeacherTooltipOutsideClickListener();
+  const classes = existingClasses || await getListClasses();
+  renderedClassesCache = Array.isArray(classes) ? classes : [];
 
-  if (classes && classes.length) {
-    $('class-table').innerHTML = classes.map((c) => {
+  const hasActiveClass = renderedClassesCache.some((cls) => getClassIdValue(cls) === Number(activeClassTeacherTooltipId));
+  if (!hasActiveClass) activeClassTeacherTooltipId = null;
+
+  if (renderedClassesCache.length) {
+    $('class-table').innerHTML = renderedClassesCache.map((c) => {
       const classId = getClassIdValue(c);
-      const teachersDisplay = getClassTeacherDisplay(c);
+      const teachersDisplay = renderClassTeacherCell(c);
       return `<tr><td class="fw-600">${c.className || '—'}</td><td>${teachersDisplay}</td><td>${fmt(c.feePerDay)}</td><td>${c.timeTable || '—'}</td><td>${c.totalStudents || 0} HV</td><td><button class="btn btn-outline btn-xs" onclick="openClassModal(${classId})">✏️</button> <button class="btn btn-outline btn-xs" onclick="openClassStudentAssignModal(${classId})">👥</button> <button class="btn btn-danger btn-xs" onclick="deleteClassAlert(${classId})">🗑</button></td></tr>`;
     }).join('');
     return;
@@ -212,7 +305,7 @@ async function saveClass() {
         className: name,
         feePerDay: rate,
         timeTable: schedule || null,
-        teacherIds: teacherIds.length ? teacherIds : null,
+        teacherIds,
       });
       showToast('Đã cập nhật lớp học!');
     } else {
@@ -291,8 +384,8 @@ async function saveClassStudentAssignment() {
       className: getClassNameValue(cls),
       feePerDay: getClassRateValue(cls),
       timeTable: getClassScheduleValue(cls),
-      teacherIds: teacherIds.length ? teacherIds : null,
-      studentIds: studentIds.length ? studentIds : null,
+      teacherIds,
+      studentIds,
     });
 
     closeModal('modal-class-assign-students');
@@ -317,5 +410,5 @@ async function deleteClassAlert(id) {
   populateClassSelects();
 }
 
-Object.assign(window, { renderClasses, openClassModal, saveClass, deleteClassAlert, openClassStudentAssignModal, saveClassStudentAssignment, updateClassStudentSelectionCount });
-export { renderClasses, openClassModal, saveClass, deleteClassAlert, openClassStudentAssignModal, saveClassStudentAssignment, updateClassStudentSelectionCount };
+Object.assign(window, { renderClasses, openClassModal, saveClass, deleteClassAlert, openClassStudentAssignModal, saveClassStudentAssignment, updateClassStudentSelectionCount, toggleClassTeacherTooltip });
+export { renderClasses, openClassModal, saveClass, deleteClassAlert, openClassStudentAssignModal, saveClassStudentAssignment, updateClassStudentSelectionCount, toggleClassTeacherTooltip };

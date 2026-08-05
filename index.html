@@ -277,6 +277,94 @@
   .search-box input { padding-left: 32px; min-width: 220px; }
   .search-box::before { content: '🔍'; position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 13px; pointer-events: none; }
 
+  /* ── STUDENT CLASS TOOLTIP ── */
+  .student-class-tooltip-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  .student-class-trigger {
+    border: none;
+    background: var(--blue-light);
+    color: #1E40AF;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .student-class-trigger:hover {
+    background: #DCEAFF;
+  }
+  .student-class-tooltip {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    z-index: 80;
+    padding: 8px 10px;
+  }
+  .student-class-tooltip.open {
+    display: block;
+  }
+  .student-class-tooltip ul {
+    margin: 0;
+    padding-left: 16px;
+  }
+  .student-class-tooltip li {
+    line-height: 1.4;
+    color: var(--gray-700);
+    font-size: 12px;
+  }
+
+  /* ── CLASS TEACHER TOOLTIP ── */
+  .class-teacher-tooltip-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  .class-teacher-trigger {
+    border: none;
+    background: var(--blue-light);
+    color: #1E40AF;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .class-teacher-trigger:hover {
+    background: #DCEAFF;
+  }
+  .class-teacher-tooltip {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    z-index: 80;
+    padding: 8px 10px;
+  }
+  .class-teacher-tooltip.open {
+    display: block;
+  }
+  .class-teacher-tooltip ul {
+    margin: 0;
+    padding-left: 16px;
+  }
+  .class-teacher-tooltip li {
+    line-height: 1.4;
+    color: var(--gray-700);
+    font-size: 12px;
+  }
+
   /* ── ATTENDANCE GRID ── */
   .att-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 6px; }
   .att-cell {
@@ -492,6 +580,19 @@
           <p class="text-muted text-center">Chọn lớp và tháng để xem điểm danh giáo viên.</p>
         </div>
       </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>👩‍🏫 Danh sách giáo viên</h3>
+          <button class="btn btn-outline" onclick="renderTeacherManagementList()">↻ Tải lại</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Họ tên</th><th>SĐT</th><th>Lớp</th><th>Thao tác</th></tr></thead>
+            <tbody id="teacher-mgmt-table"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- ══ STUDENT ATTENDANCE ══ -->
@@ -702,6 +803,25 @@
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-teacher-create')">Hủy</button>
       <button class="btn btn-primary" onclick="saveTeacherFromAttendance()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Teacher Edit Modal -->
+<div class="modal-overlay" id="modal-teacher-edit">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h3>Sửa thông tin giáo viên</h3>
+      <button class="modal-close" onclick="closeModal('modal-teacher-edit')">×</button>
+    </div>
+    <div class="form-grid">
+      <input type="hidden" id="edit-teacher-id">
+      <div class="form-group"><label>Họ và tên *</label><input type="text" class="form-control" id="tedit-name" placeholder="Nguyễn Văn B"></div>
+      <div class="form-group"><label>Số điện thoại</label><input type="text" class="form-control" id="tedit-phone" placeholder="09xx..."></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-teacher-edit')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveTeacherEdit()">Lưu thay đổi</button>
     </div>
   </div>
 </div>

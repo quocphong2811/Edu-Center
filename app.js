@@ -42,6 +42,7 @@ function handleNavigation(page) {
   if (page === 'dashboard') window.renderDashboard();
   if (page === 'students') window.renderStudents();
   if (page === 'classes') window.renderClasses();
+  if (page === 'teacher-att') window.renderTeacherManagementList?.();
   if (page === 'tuition') {
     $('t-month').value = thisMonth();
     window.renderTuition();

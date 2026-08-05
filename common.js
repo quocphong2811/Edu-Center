@@ -118,12 +118,51 @@ export async function createTeacher(teacher) {
   return res;
 }
 
+export async function updateTeacher(teacher) {
+  const payload = {
+    id: Number(teacher?.id),
+  };
+
+  if (typeof teacher?.fullName === 'string') {
+    payload.fullName = teacher.fullName;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(teacher || {}, 'phoneNumber')) {
+    payload.phoneNumber = teacher.phoneNumber;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(teacher || {}, 'classIds')) {
+    payload.classIds = teacher.classIds;
+  }
+
+  const res = await apiPut(`/functions/v1/update-teacher`, {
+    headers: {
+      apikey: SUPABASE_KEY,
+    },
+    body: payload,
+  });
+  if (!res) throw new Error('Failed to update teacher', res);
+
+  return res;
+}
+
+export async function deleteTeacher(teacherId, forceDelete = false) {
+  const res = await apiDelete(`/functions/v1/delete-teacher?id=${teacherId}&force=${forceDelete}`, {
+    headers: {
+      apikey: SUPABASE_KEY,
+    },
+  });
+  if (!res) throw new Error('Failed to delete teacher', res);
+
+  return res;
+}
+
 export async function createClass(classData) {
   const res = await apiPost(`/functions/v1/create-class`, {
     headers: {
       apikey: SUPABASE_KEY,
     },
-    body: { class: classData },
+    body: classData,
   });
   if (!res) throw new Error('Failed to create class', res);
 
@@ -131,11 +170,39 @@ export async function createClass(classData) {
 }
 
 export async function updateClass(classData) {
+  const payload = {
+    id: Number(classData?.id),
+  };
+
+  if (typeof classData?.className === 'string') {
+    payload.className = classData.className;
+  }
+
+  if (typeof classData?.feePerDay === 'number' && Number.isFinite(classData.feePerDay)) {
+    payload.feePerDay = classData.feePerDay;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(classData || {}, 'timeTable')) {
+    payload.timeTable = classData.timeTable;
+  }
+
+  if (Array.isArray(classData?.teacherIds)) {
+    payload.teacherIds = classData.teacherIds
+      .map((teacherId) => Number(teacherId))
+      .filter((teacherId) => teacherId > 0);
+  }
+
+  if (Array.isArray(classData?.studentIds)) {
+    payload.studentIds = classData.studentIds
+      .map((studentId) => Number(studentId))
+      .filter((studentId) => studentId > 0);
+  }
+
   const res = await apiPut(`/functions/v1/update-class`, {
     headers: {
       apikey: SUPABASE_KEY,
     },
-    body: { class: classData },
+    body: payload,
   });
   if (!res) throw new Error('Failed to update class', res);
 
@@ -179,7 +246,7 @@ export async function createStudent(student) {
       headers: {
         apikey: SUPABASE_KEY,
       },
-      body: { student },
+      body: student,
     });
     if (!res) throw new Error('Failed to create student', res);
 
@@ -187,11 +254,33 @@ export async function createStudent(student) {
 }
 
 export async function updateStudent(student) {
+  const payload = {
+    id: Number(student?.id),
+    fullName: String(student?.fullName || '').trim(),
+    personalPhone: String(student?.personalPhone || '').trim(),
+  };
+
+  if (Object.prototype.hasOwnProperty.call(student || {}, 'parentPhone')) {
+    payload.parentPhone = student.parentPhone;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(student || {}, 'feeStatus')) {
+    payload.feeStatus = student.feeStatus;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(student || {}, 'classIds')) {
+    payload.classIds = Array.isArray(student.classIds)
+      ? student.classIds
+        .map((classId) => Number(classId))
+        .filter((classId) => classId > 0)
+      : student.classIds;
+  }
+
   const res = await apiPut(`/functions/v1/update-student`, {
     headers: {
       apikey: SUPABASE_KEY,
     },
-    body: { student },
+    body: payload,
   });
   if (!res) throw new Error('Failed to update student', res);
 
@@ -585,6 +674,9 @@ Object.assign(window, {
   getListClasses,
   getClassById,
   getListTeachers,
+  createTeacher,
+  updateTeacher,
+  deleteTeacher,
   getListStudents,
   createClass,
   updateClass,

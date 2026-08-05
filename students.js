@@ -1,5 +1,10 @@
 import { $, fmt, getClassName, getStudentById, populateClassSelects, showToast, openModal, closeModal, thisMonth, createStudent, getStudentsByClass, getListStudents, getStudentsByKeyword, updateStudent, deleteStudent, getListClasses } from './common.js';
 
+let renderedStudentsCache = [];
+let activeStudentClassTooltipId = null;
+const studentClassNamesById = new Map();
+let hasStudentTooltipOutsideClickListener = false;
+
 function getClassIdValue(cls) {
   const classId = cls?.id ?? cls?.classId ?? cls?.class_id;
   if (classId == null || classId === '') return null;
@@ -7,13 +12,82 @@ function getClassIdValue(cls) {
 }
 
 function getStudentClassDisplay(classes) {
-  if (!classes || !classes.length) return '—';
-  for (const cls of classes) {
-    if (typeof cls?.className === 'string' && cls.className.trim()) {
-      return cls.className;
-    }
-    return cls?.className?.join(', ') || '—';
-  }
+  const classNames = Array.isArray(classes)
+    ? classes
+      .map((cls) => cls?.className)
+      .filter((className) => typeof className === 'string' && className.trim())
+      .map((className) => className.trim())
+    : [];
+
+  if (!classNames.length) return '—';
+  if (classNames.length === 1) return classNames[0];
+  return 'Nhiều lớp';
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function getClassNames(classes) {
+  if (!Array.isArray(classes)) return [];
+
+  return classes
+    .map((cls) => cls?.className)
+    .filter((className) => typeof className === 'string' && className.trim())
+    .map((className) => className.trim());
+}
+
+function ensureTooltipOutsideClickListener() {
+  if (hasStudentTooltipOutsideClickListener) return;
+
+  document.addEventListener('click', (event) => {
+    if (activeStudentClassTooltipId == null) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest('.student-class-tooltip-wrap')) return;
+
+    activeStudentClassTooltipId = null;
+    renderStudents(renderedStudentsCache);
+  });
+
+  hasStudentTooltipOutsideClickListener = true;
+}
+
+function renderStudentClassCell(student) {
+  const studentId = Number(student?.studentId || 0);
+  const classNames = getClassNames(student?.classes);
+  studentClassNamesById.set(studentId, classNames);
+
+  if (!classNames.length) return '—';
+  if (classNames.length === 1) return escapeHtml(classNames[0]);
+
+  const tooltipItems = classNames
+    .map((className) => `<li>${escapeHtml(className)}</li>`)
+    .join('');
+  const isOpen = activeStudentClassTooltipId === studentId ? ' open' : '';
+
+  return `
+    <div class="student-class-tooltip-wrap">
+      <button type="button" class="student-class-trigger" onclick="toggleStudentClassTooltip(${studentId}, event)">Nhiều lớp</button>
+      <div class="student-class-tooltip${isOpen}">
+        <ul>${tooltipItems}</ul>
+      </div>
+    </div>
+  `;
+}
+
+function toggleStudentClassTooltip(studentId, event) {
+  event?.stopPropagation?.();
+  const id = Number(studentId || 0);
+  const classNames = studentClassNamesById.get(id) || [];
+  if (classNames.length <= 1) return;
+
+  activeStudentClassTooltipId = activeStudentClassTooltipId === id ? null : id;
+  renderStudents(renderedStudentsCache);
 }
 
 async function populateStudentClassMultiSelect(selectedClassIds = []) {
@@ -33,11 +107,16 @@ async function populateStudentClassMultiSelect(selectedClassIds = []) {
 }
 
 async function renderStudents(existingStudents) {
+  ensureTooltipOutsideClickListener();
   const students = existingStudents || await getListStudents();
+  renderedStudentsCache = Array.isArray(students) ? students : [];
 
-  $('student-table').innerHTML = students.map((s, i) => {
-    const classDisplay = getStudentClassDisplay(s.classes);
-    return `<tr><td>${s.studentId}</td><td class="fw-600">${s.fullName || '—'}</td><td>${classDisplay}</td><td>${s.personalPhone || '—'}</td><td>${s.parentPhone || '—'}</td><td><span class="badge badge-gray">Chưa có HP</span></td><td><button class="btn btn-outline btn-xs" onclick="openStudentModal(${s.studentId})">✏️</button> <button class="btn btn-danger btn-xs" onclick="deleteStudentAlert(${s.studentId})">🗑</button></td></tr>`;
+  const hasActiveStudent = renderedStudentsCache.some((student) => Number(student?.studentId || 0) === Number(activeStudentClassTooltipId));
+  if (!hasActiveStudent) activeStudentClassTooltipId = null;
+
+  $('student-table').innerHTML = renderedStudentsCache.map((s) => {
+    const classCell = renderStudentClassCell(s);
+    return `<tr><td>${s.studentId}</td><td class="fw-600">${s.fullName || '—'}</td><td>${classCell}</td><td>${s.personalPhone || '—'}</td><td>${s.parentPhone || '—'}</td><td><span class="badge badge-gray">Chưa có HP</span></td><td><button class="btn btn-outline btn-xs" onclick="openStudentModal(${s.studentId})">✏️</button> <button class="btn btn-danger btn-xs" onclick="deleteStudentAlert(${s.studentId})">🗑</button></td></tr>`;
   }).join('') || '<tr><td colspan="7" class="text-muted text-center">Chưa có học viên nào</td></tr>';
 }
   
@@ -70,8 +149,8 @@ async function openStudentModal(id) {
   $('modal-student-title').textContent = id ? 'Sửa thông tin học viên' : 'Thêm học viên mới';
   if (id) {
     const savedStudent = await getStudentById(id);
-    const student = savedStudent?.student;
-    const classes = savedStudent?.classes || [];
+    const student = savedStudent?.student || savedStudent || {};
+    const classes = savedStudent?.classes || student?.classes || [];
     $('s-name').value = student?.fullName || '';
     $('s-phone').value = student?.personalPhone || '';
     $('s-parent-phone').value = student?.parentPhone || '';
@@ -82,8 +161,14 @@ async function openStudentModal(id) {
     const classIdsFromStudent = Array.isArray(student?.classIds)
       ? student.classIds.map((classId) => String(classId))
       : [];
+    const classIdsFromStudentClasses = Array.isArray(student?.classes)
+      ? student.classes
+        .map((cls) => getClassIdValue(cls))
+        .filter(Boolean)
+      : [];
     const selectedClassIds = classIdsFromClasses.length ? classIdsFromClasses : classIdsFromStudent;
-    await populateStudentClassMultiSelect(selectedClassIds);
+    const normalizedSelectedClassIds = selectedClassIds.length ? selectedClassIds : classIdsFromStudentClasses;
+    await populateStudentClassMultiSelect(normalizedSelectedClassIds);
   } else {
     ['s-name', 's-phone', 's-parent-phone'].forEach((f) => ($(f).value = ''));
     await populateStudentClassMultiSelect([]);
@@ -106,14 +191,12 @@ async function saveStudent() {
   if (!name || !personalPhone) return showToast('Vui lòng điền đầy đủ thông tin!', 'error');
   const id = +$('edit-student-id').value;
   if (id) {
-    const s = await getStudentById(id);
     await updateStudent({
-      ...s.student,
       id: id,
       fullName: name,
       personalPhone,
       parentPhone: parentPhone || null,
-      classIds: updateClassIds
+      classIds: updateClassIds,
     });
     showToast('Đã cập nhật học viên!');
   } else {
@@ -151,5 +234,5 @@ async function deleteStudentAlert(id) {
   renderStudents();
 }
 
-Object.assign(window, { renderStudents, filterStudentsByClass, filterStudentsByKeyword, openStudentModal, saveStudent, deleteStudentAlert });
-export { renderStudents, filterStudentsByClass, filterStudentsByKeyword, openStudentModal, saveStudent, deleteStudentAlert };
+Object.assign(window, { renderStudents, filterStudentsByClass, filterStudentsByKeyword, openStudentModal, saveStudent, deleteStudentAlert, toggleStudentClassTooltip });
+export { renderStudents, filterStudentsByClass, filterStudentsByKeyword, openStudentModal, saveStudent, deleteStudentAlert, toggleStudentClassTooltip };

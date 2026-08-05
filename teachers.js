@@ -1,7 +1,9 @@
-import { $, fmt, getListClasses, getTeachersByClassAndMonth, getStudentsByClass, updateTeacherCheckin, createTeacher, openModal, closeModal, showToast } from './common.js';
+import { $, fmt, getListClasses, getListTeachers, getTeachersByClassAndMonth, getStudentsByClass, updateTeacherCheckin, createTeacher, updateTeacher, deleteTeacher, openModal, closeModal, showToast } from './common.js';
 
 let teacherAttendanceState = null;
 let isCreatingTeacher = false;
+let isSavingTeacherEdit = false;
+let teacherManagementRows = [];
 
 function getClassIdValue(cls) {
   return Number(cls?.classId ?? cls?.id ?? cls?.class_id ?? 0);
@@ -17,6 +19,29 @@ function getClassRateValue(cls) {
 
 function getTeacherNameValue(teacher) {
   return teacher?.fullName ?? teacher?.teacherFullName ?? teacher?.name ?? '—';
+}
+
+function getTeacherIdValue(teacher) {
+  return Number(teacher?.teacherId ?? teacher?.id ?? teacher?.teacher_id ?? 0);
+}
+
+function getTeacherPhoneValue(teacher) {
+  return teacher?.phoneNumber ?? teacher?.phone ?? teacher?.teacherPhone ?? '';
+}
+
+function getTeacherClassDisplay(teacher) {
+  if (Array.isArray(teacher?.classes) && teacher.classes.length) {
+    return teacher.classes
+      .map((cls) => cls?.className ?? cls?.name ?? cls?.class_name ?? '')
+      .filter(Boolean)
+      .join(', ') || '—';
+  }
+
+  if (Array.isArray(teacher?.classNames) && teacher.classNames.length) {
+    return teacher.classNames.filter(Boolean).join(', ') || '—';
+  }
+
+  return '—';
 }
 
 function getDaysInMonth(month) {
@@ -114,6 +139,55 @@ function renderTeacherAttendance() {
   refreshTeacherSummary();
 }
 
+function syncTeacherAttendanceAfterEdit(teacherId, fullName) {
+  if (!teacherAttendanceState) return;
+  const teacher = teacherAttendanceState.teachers.find((item) => Number(item.teacherId) === Number(teacherId));
+  if (!teacher) return;
+  teacher.fullName = fullName;
+  renderTeacherAttendance();
+}
+
+function syncTeacherAttendanceAfterDelete(teacherId) {
+  if (!teacherAttendanceState) return;
+  const beforeCount = teacherAttendanceState.teachers.length;
+  teacherAttendanceState.teachers = teacherAttendanceState.teachers.filter((item) => Number(item.teacherId) !== Number(teacherId));
+  if (teacherAttendanceState.teachers.length !== beforeCount) {
+    renderTeacherAttendance();
+  }
+}
+
+async function renderTeacherManagementList() {
+  const tableEl = $('teacher-mgmt-table');
+  if (!tableEl) return;
+
+  let teachers = [];
+  try {
+    teachers = await getListTeachers();
+  } catch (err) {
+    tableEl.innerHTML = '<tr><td colspan="5" class="text-muted text-center">Không tải được danh sách giáo viên</td></tr>';
+    showToast(err?.message || 'Không tải được danh sách giáo viên', 'error');
+    return;
+  }
+
+  teacherManagementRows = (teachers || []).map((teacher) => ({
+    raw: teacher,
+    teacherId: getTeacherIdValue(teacher),
+    fullName: getTeacherNameValue(teacher),
+    phoneNumber: getTeacherPhoneValue(teacher),
+    classesDisplay: getTeacherClassDisplay(teacher),
+  })).filter((teacher) => teacher.teacherId > 0);
+
+  if (!teacherManagementRows.length) {
+    tableEl.innerHTML = '<tr><td colspan="5" class="text-muted text-center">Chưa có giáo viên nào</td></tr>';
+    return;
+  }
+
+  tableEl.innerHTML = teacherManagementRows.map((teacher) => {
+    const phoneNumber = teacher.phoneNumber || '—';
+    return `<tr><td>${teacher.teacherId}</td><td class="fw-600">${teacher.fullName || '—'}</td><td>${phoneNumber}</td><td>${teacher.classesDisplay}</td><td><button class="btn btn-outline btn-xs" onclick="openTeacherEditModal(${teacher.teacherId})">✏️</button> <button class="btn btn-danger btn-xs" onclick="deleteTeacherAlert(${teacher.teacherId})">🗑</button></td></tr>`;
+  }).join('');
+}
+
 async function loadTeacherAtt() {
   const classId = Number($('tatt-class-select')?.value || 0);
   const month = $('tatt-month')?.value;
@@ -178,6 +252,19 @@ function openTeacherCreateModal() {
   openModal('modal-teacher-create');
 }
 
+function openTeacherEditModal(teacherId) {
+  const row = teacherManagementRows.find((teacher) => Number(teacher.teacherId) === Number(teacherId));
+  if (!row) {
+    showToast('Không tìm thấy giáo viên', 'error');
+    return;
+  }
+
+  $('edit-teacher-id').value = String(row.teacherId);
+  $('tedit-name').value = row.fullName || '';
+  $('tedit-phone').value = row.phoneNumber || '';
+  openModal('modal-teacher-edit');
+}
+
 async function saveTeacherFromAttendance() {
   if (isCreatingTeacher) return;
 
@@ -198,6 +285,7 @@ async function saveTeacherFromAttendance() {
     });
     closeModal('modal-teacher-create');
     showToast('Đã thêm giáo viên mới!');
+    await renderTeacherManagementList();
   } catch (err) {
     showToast(err?.message || 'Không thể thêm giáo viên', 'error');
   } finally {
@@ -205,5 +293,77 @@ async function saveTeacherFromAttendance() {
   }
 }
 
-Object.assign(window, { loadTeacherAtt, saveTeacherAtt, toggleTeacherAttDate: toggleTeacherDate, openTeacherCreateModal, saveTeacherFromAttendance });
-export { loadTeacherAtt, saveTeacherAtt, openTeacherCreateModal, saveTeacherFromAttendance };
+async function saveTeacherEdit() {
+  if (isSavingTeacherEdit) return;
+
+  const teacherId = Number($('edit-teacher-id')?.value || 0);
+  const fullName = $('tedit-name')?.value?.trim() || '';
+  const phoneNumber = $('tedit-phone')?.value?.trim() || '';
+
+  if (!teacherId) {
+    showToast('Không tìm thấy giáo viên', 'error');
+    return;
+  }
+
+  if (!fullName) {
+    showToast('Vui lòng điền họ tên giáo viên!', 'error');
+    return;
+  }
+
+  isSavingTeacherEdit = true;
+  try {
+    await updateTeacher({
+      id: teacherId,
+      fullName,
+      phoneNumber: phoneNumber || null,
+      classIds: null,
+    });
+    closeModal('modal-teacher-edit');
+    showToast('Đã cập nhật giáo viên!');
+    syncTeacherAttendanceAfterEdit(teacherId, fullName);
+    await renderTeacherManagementList();
+  } catch (err) {
+    showToast(err?.message || 'Không thể cập nhật giáo viên', 'error');
+  } finally {
+    isSavingTeacherEdit = false;
+  }
+}
+
+async function deleteTeacherAlert(teacherId) {
+  if (!confirm('Xóa giáo viên này?')) return;
+  let forceDelete = false;
+  if (confirm('Bấm OK để xóa tất cả (bao gồm cả dữ liệu liên quan). Cancel để xóa thường.')) {
+    forceDelete = true;
+  }
+
+  try {
+    await deleteTeacher(teacherId, forceDelete);
+    showToast('Đã xóa giáo viên');
+    syncTeacherAttendanceAfterDelete(teacherId);
+    await renderTeacherManagementList();
+  } catch (err) {
+    showToast(err?.message || 'Không thể xóa giáo viên', 'error');
+  }
+}
+
+Object.assign(window, {
+  loadTeacherAtt,
+  saveTeacherAtt,
+  toggleTeacherAttDate: toggleTeacherDate,
+  openTeacherCreateModal,
+  saveTeacherFromAttendance,
+  renderTeacherManagementList,
+  openTeacherEditModal,
+  saveTeacherEdit,
+  deleteTeacherAlert,
+});
+export {
+  loadTeacherAtt,
+  saveTeacherAtt,
+  openTeacherCreateModal,
+  saveTeacherFromAttendance,
+  renderTeacherManagementList,
+  openTeacherEditModal,
+  saveTeacherEdit,
+  deleteTeacherAlert,
+};
