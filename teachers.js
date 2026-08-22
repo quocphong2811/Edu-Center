@@ -1,4 +1,4 @@
-import { $, fmt, getListClasses, getListTeachers, getTeachersByClassAndMonth, getStudentsByClass, updateTeacherCheckin, createTeacher, updateTeacher, deleteTeacher, openModal, closeModal, showToast } from './common.js';
+import { $, fmt, getListClasses, getListTeachers, getTeachersByClassAndMonth, getStudentsByClass, updateTeacherCheckin, createTeacher, updateTeacher, deleteTeacher, openModal, closeModal, showToast, setButtonLoading, showTableLoading } from './common.js';
 
 let teacherAttendanceState = null;
 let isCreatingTeacher = false;
@@ -51,23 +51,23 @@ function getDaysInMonth(month) {
 }
 
 function getTeacherCheckedCount(teacher) {
-  return teacher.checkedDates.size;
+  if (Number.isFinite(Number(teacher?.confirmedTotalCheckinDays))) {
+    return Number(teacher.confirmedTotalCheckinDays);
+  }
+  return teacher?.checkedDates instanceof Set ? teacher.checkedDates.size : 0;
 }
 
 function refreshTeacherSummary() {
   if (!teacherAttendanceState) {
     $('tatt-total').textContent = '0';
-    $('tatt-tuition').textContent = fmt(0);
     return;
   }
 
   const classRate = getClassRateValue(teacherAttendanceState.classMeta);
   const studentCount = Number(teacherAttendanceState.studentCount || 0);
   const totalSessions = teacherAttendanceState.teachers.reduce((sum, teacher) => sum + getTeacherCheckedCount(teacher), 0);
-  const totalTuition = totalSessions * classRate * studentCount;
 
   $('tatt-total').textContent = String(totalSessions);
-  $('tatt-tuition').textContent = fmt(totalTuition);
 }
 
 function toggleTeacherDate(teacherId, date) {
@@ -81,6 +81,7 @@ function toggleTeacherDate(teacherId, date) {
   } else {
     teacher.checkedDates.add(date);
   }
+  teacher.confirmedTotalCheckinDays = null;
 
   const cell = document.querySelector(`[data-teacher-id="${teacherId}"][data-date="${date}"]`);
   if (cell) {
@@ -159,6 +160,7 @@ function syncTeacherAttendanceAfterDelete(teacherId) {
 async function renderTeacherManagementList() {
   const tableEl = $('teacher-mgmt-table');
   if (!tableEl) return;
+  showTableLoading('teacher-mgmt-table', 5, 'Đang tải giáo viên...');
 
   let teachers = [];
   try {
@@ -184,14 +186,18 @@ async function renderTeacherManagementList() {
 
   tableEl.innerHTML = teacherManagementRows.map((teacher) => {
     const phoneNumber = teacher.phoneNumber || '—';
-    return `<tr><td>${teacher.teacherId}</td><td class="fw-600">${teacher.fullName || '—'}</td><td>${phoneNumber}</td><td>${teacher.classesDisplay}</td><td><button class="btn btn-outline btn-xs" onclick="openTeacherEditModal(${teacher.teacherId})">✏️</button> <button class="btn btn-danger btn-xs" onclick="deleteTeacherAlert(${teacher.teacherId})">🗑</button></td></tr>`;
+    return `<tr><td>${teacher.teacherId}</td><td class="fw-600">${teacher.fullName || '—'}</td><td>${phoneNumber}</td><td>${teacher.classesDisplay}</td><td><button class="btn btn-outline btn-xs" onclick="openTeacherEditModal(${teacher.teacherId})">✏️</button> <button class="btn btn-danger btn-xs" onclick="deleteTeacherAlert(event, ${teacher.teacherId})">🗑</button></td></tr>`;
   }).join('');
 }
 
-async function loadTeacherAtt() {
+async function loadTeacherAtt(event) {
+  setButtonLoading(event, true, 'Đang tải...');
   const classId = Number($('tatt-class-select')?.value || 0);
   const month = $('tatt-month')?.value;
-  if (!classId || !month) return showToast('Chọn lớp và tháng!', 'error');
+  if (!classId || !month) {
+    setButtonLoading(event, false);
+    return showToast('Chọn lớp và tháng!', 'error');
+  }
 
   try {
     const [classes, teacherRows, studentsInClass] = await Promise.all([
@@ -205,6 +211,7 @@ async function loadTeacherAtt() {
       teacherId: Number(teacher.teacherId),
       fullName: getTeacherNameValue(teacher),
       checkedDates: new Set((teacher.checkedDates || []).filter((date) => typeof date === 'string' && date.startsWith(month))),
+      confirmedTotalCheckinDays: Number.isFinite(Number(teacher.totalCheckinDays)) ? Number(teacher.totalCheckinDays) : null,
     })).filter((teacher) => teacher.teacherId > 0);
 
     teacherAttendanceState = {
@@ -220,11 +227,15 @@ async function loadTeacherAtt() {
     showToast('Đã tải điểm danh giáo viên');
   } catch (err) {
     showToast(err?.message || 'Không thể tải điểm danh giáo viên', 'error');
+  } finally {
+    setButtonLoading(event, false);
   }
 }
 
-async function saveTeacherAtt() {
+async function saveTeacherAtt(event) {
+  setButtonLoading(event, true, 'Đang lưu...');
   if (!teacherAttendanceState) {
+    setButtonLoading(event, false);
     showToast('Vui lòng tải danh sách điểm danh trước', 'error');
     return;
   }
@@ -233,16 +244,46 @@ async function saveTeacherAtt() {
     month: teacherAttendanceState.month,
     teachers: teacherAttendanceState.teachers.map((teacher) => ({
       teacherId: Number(teacher.teacherId),
-      checkedDates: Array.from(teacher.checkedDates).sort(),
+      classes: [{
+        classId: Number(teacherAttendanceState.classId),
+        checkedDates: Array.from(teacher.checkedDates).sort(),
+      }],
     })),
   };
 
   try {
-    await updateTeacherCheckin(payload);
+    const response = await updateTeacherCheckin(payload);
+
+    const responseTeachers = Array.isArray(response?.teachers) ? response.teachers : [];
+    const responseByTeacher = new Map(
+      responseTeachers.map((teacher) => [Number(teacher?.teacherId), teacher])
+    );
+
+    teacherAttendanceState.teachers.forEach((teacher) => {
+      const responseTeacher = responseByTeacher.get(Number(teacher.teacherId));
+      const classes = Array.isArray(responseTeacher?.classes) ? responseTeacher.classes : [];
+      const classEntry = classes.find((cls) => Number(cls?.classId) === Number(teacherAttendanceState.classId));
+      if (classEntry && Number.isFinite(Number(classEntry.totalCheckinDays))) {
+        teacher.confirmedTotalCheckinDays = Number(classEntry.totalCheckinDays);
+      } else {
+        teacher.confirmedTotalCheckinDays = null;
+      }
+    });
+
+    refreshTeacherSummary();
+    teacherAttendanceState.teachers.forEach((teacher) => {
+      const checkedCountEl = $(`tatt-teacher-count-${teacher.teacherId}`);
+      if (checkedCountEl) {
+        checkedCountEl.textContent = `✓ Có dạy: ${getTeacherCheckedCount(teacher)} buổi`;
+      }
+    });
+
     showToast('Đã lưu điểm danh giáo viên!');
     await loadTeacherAtt();
   } catch (err) {
     showToast(err?.message || 'Không thể lưu điểm danh giáo viên', 'error');
+  } finally {
+    setButtonLoading(event, false);
   }
 }
 
@@ -265,18 +306,20 @@ function openTeacherEditModal(teacherId) {
   openModal('modal-teacher-edit');
 }
 
-async function saveTeacherFromAttendance() {
+async function saveTeacherFromAttendance(event) {
   if (isCreatingTeacher) return;
 
   const fullName = $('tadd-name')?.value?.trim() || '';
   const phoneNumber = $('tadd-phone')?.value?.trim() || '';
 
   if (!fullName) {
+    setButtonLoading(event, false);
     showToast('Vui lòng điền họ tên giáo viên!', 'error');
     return;
   }
 
   isCreatingTeacher = true;
+  setButtonLoading(event, true, 'Đang lưu...');
 
   try {
     await createTeacher({
@@ -290,10 +333,11 @@ async function saveTeacherFromAttendance() {
     showToast(err?.message || 'Không thể thêm giáo viên', 'error');
   } finally {
     isCreatingTeacher = false;
+    setButtonLoading(event, false);
   }
 }
 
-async function saveTeacherEdit() {
+async function saveTeacherEdit(event) {
   if (isSavingTeacherEdit) return;
 
   const teacherId = Number($('edit-teacher-id')?.value || 0);
@@ -301,16 +345,19 @@ async function saveTeacherEdit() {
   const phoneNumber = $('tedit-phone')?.value?.trim() || '';
 
   if (!teacherId) {
+    setButtonLoading(event, false);
     showToast('Không tìm thấy giáo viên', 'error');
     return;
   }
 
   if (!fullName) {
+    setButtonLoading(event, false);
     showToast('Vui lòng điền họ tên giáo viên!', 'error');
     return;
   }
 
   isSavingTeacherEdit = true;
+  setButtonLoading(event, true, 'Đang lưu...');
   try {
     await updateTeacher({
       id: teacherId,
@@ -326,15 +373,18 @@ async function saveTeacherEdit() {
     showToast(err?.message || 'Không thể cập nhật giáo viên', 'error');
   } finally {
     isSavingTeacherEdit = false;
+    setButtonLoading(event, false);
   }
 }
 
-async function deleteTeacherAlert(teacherId) {
+async function deleteTeacherAlert(event, teacherId) {
   if (!confirm('Xóa giáo viên này?')) return;
   let forceDelete = false;
   if (confirm('Bấm OK để xóa tất cả (bao gồm cả dữ liệu liên quan). Cancel để xóa thường.')) {
     forceDelete = true;
   }
+
+  setButtonLoading(event, true, 'Đang xóa...');
 
   try {
     await deleteTeacher(teacherId, forceDelete);
@@ -343,6 +393,8 @@ async function deleteTeacherAlert(teacherId) {
     await renderTeacherManagementList();
   } catch (err) {
     showToast(err?.message || 'Không thể xóa giáo viên', 'error');
+  } finally {
+    setButtonLoading(event, false);
   }
 }
 

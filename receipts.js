@@ -1,6 +1,7 @@
-import { $, fmt, showToast, getReceiptRows } from './common.js';
+import { $, fmt, showToast, getReceiptRows, showTableLoading } from './common.js';
 
 async function filterReceipts() {
+  showTableLoading('receipt-table', 9, 'Đang tải phiếu thu...');
   const q = ($('rc-search')?.value || '').toLowerCase();
   const month = $('rc-filter-month')?.value || '';
 

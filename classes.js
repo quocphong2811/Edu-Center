@@ -1,9 +1,20 @@
-import { $, fmt, populateClassSelects, showToast, openModal, closeModal, getListClasses, getClassById, getListTeachers, getListStudents, createClass, updateClass } from './common.js';
+import { $, fmt, populateClassSelects, showToast, openModal, closeModal, getListClasses, getClassById, getListTeachers, getListStudents, createClass, updateClass, setButtonLoading, showTableLoading, setModalLoading } from './common.js';
 
 let renderedClassesCache = [];
 let activeClassTeacherTooltipId = null;
 const classTeacherNamesByClassId = new Map();
 let hasClassTeacherTooltipOutsideClickListener = false;
+const CLASS_STUDENT_PAGE_SIZE = 50;
+const CLASS_STUDENT_SCROLL_PREFETCH_PX = 48;
+const classStudentSelectState = {
+  isLoading: false,
+  hasMore: true,
+  offset: 0,
+  version: 0,
+  selectedIds: new Set(),
+  loadedIds: new Set(),
+};
+let hasClassStudentSelectScrollListener = false;
 
 function getClassIdValue(cls) {
   return Number(cls?.classId ?? cls?.id ?? cls?.class_id ?? 0);
@@ -40,6 +51,27 @@ function getStudentClassIds(student) {
 
   const classId = Number(student?.classId ?? student?.class_id ?? 0);
   return classId > 0 ? [classId] : [];
+}
+
+function normalizeStudentListPayload(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.students)) return payload.students;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  return [];
+}
+
+function shouldLoadMoreOnScroll(el, threshold = CLASS_STUDENT_SCROLL_PREFETCH_PX) {
+  if (!el) return false;
+  return el.scrollTop + el.clientHeight >= el.scrollHeight - threshold;
+}
+
+function hasMissingSelectedStudents() {
+  for (const studentId of classStudentSelectState.selectedIds) {
+    if (!classStudentSelectState.loadedIds.has(studentId)) return true;
+  }
+  return false;
 }
 
 function getClassNameValue(cls) {
@@ -198,16 +230,63 @@ async function populateClassStudentAssignmentSelect(selectedStudentIds = []) {
   const selectEl = $('ca-students');
   if (!selectEl) return;
 
-  const selectedSet = new Set((selectedStudentIds || []).map((id) => String(id)));
-  const students = await getListStudents();
+  if (!hasClassStudentSelectScrollListener) {
+    selectEl.addEventListener('scroll', async () => {
+      if (!shouldLoadMoreOnScroll(selectEl)) return;
+      await loadMoreClassStudentAssignmentOptions(selectEl);
+    });
+    hasClassStudentSelectScrollListener = true;
+  }
+
+  classStudentSelectState.version += 1;
+  classStudentSelectState.isLoading = false;
+  classStudentSelectState.hasMore = true;
+  classStudentSelectState.offset = 0;
+  classStudentSelectState.selectedIds = new Set((selectedStudentIds || []).map((id) => Number(id)).filter((id) => id > 0));
+  classStudentSelectState.loadedIds = new Set();
+
   selectEl.innerHTML = '';
 
-  students.forEach((student) => {
-    const studentId = getStudentIdValue(student);
-    if (!studentId) return;
-    const studentName = getStudentNameValue(student);
-    selectEl.add(new Option(studentName, String(studentId), false, selectedSet.has(String(studentId))));
-  });
+  await loadMoreClassStudentAssignmentOptions(selectEl);
+
+  while (classStudentSelectState.hasMore && hasMissingSelectedStudents()) {
+    await loadMoreClassStudentAssignmentOptions(selectEl);
+  }
+}
+
+async function loadMoreClassStudentAssignmentOptions(selectEl) {
+  if (!selectEl || classStudentSelectState.isLoading || !classStudentSelectState.hasMore) return;
+
+  const requestVersion = classStudentSelectState.version;
+  classStudentSelectState.isLoading = true;
+  try {
+    const payload = await getListStudents({
+      limit: CLASS_STUDENT_PAGE_SIZE,
+      offset: classStudentSelectState.offset,
+    });
+
+    if (requestVersion !== classStudentSelectState.version) return;
+
+    const students = normalizeStudentListPayload(payload);
+
+    students.forEach((student) => {
+      const studentId = getStudentIdValue(student);
+      if (!studentId || classStudentSelectState.loadedIds.has(studentId)) return;
+      classStudentSelectState.loadedIds.add(studentId);
+
+      const studentName = getStudentNameValue(student);
+      const isSelected = classStudentSelectState.selectedIds.has(studentId);
+      selectEl.add(new Option(studentName, String(studentId), false, isSelected));
+    });
+
+    classStudentSelectState.offset += students.length;
+    classStudentSelectState.hasMore = students.length === CLASS_STUDENT_PAGE_SIZE;
+    updateClassStudentSelectionCount();
+  } finally {
+    if (requestVersion === classStudentSelectState.version) {
+      classStudentSelectState.isLoading = false;
+    }
+  }
 }
 
 function updateClassStudentSelectionCount() {
@@ -218,11 +297,29 @@ function updateClassStudentSelectionCount() {
 }
 
 async function getFallbackStudentIdsByClassId(classId) {
-  const students = await getListStudents();
-  return students
-    .filter((student) => getStudentClassIds(student).includes(Number(classId)))
-    .map((student) => getStudentIdValue(student))
-    .filter((studentId) => studentId > 0);
+  const targetClassId = Number(classId);
+  let offset = 0;
+  const foundStudentIds = [];
+
+  while (true) {
+    const payload = await getListStudents({
+      limit: CLASS_STUDENT_PAGE_SIZE,
+      offset,
+    });
+    const students = normalizeStudentListPayload(payload);
+    if (!students.length) break;
+
+    students.forEach((student) => {
+      if (!getStudentClassIds(student).includes(targetClassId)) return;
+      const studentId = getStudentIdValue(student);
+      if (studentId > 0) foundStudentIds.push(studentId);
+    });
+
+    if (students.length < CLASS_STUDENT_PAGE_SIZE) break;
+    offset += students.length;
+  }
+
+  return foundStudentIds;
 }
 
 async function findClassForEdit(id) {
@@ -237,6 +334,7 @@ async function findClassForEdit(id) {
 
 async function renderClasses(existingClasses) {
   ensureClassTeacherTooltipOutsideClickListener();
+  if (!existingClasses) showTableLoading('class-table', 6, 'Đang tải lớp học...');
   const classes = existingClasses || await getListClasses();
   renderedClassesCache = Array.isArray(classes) ? classes : [];
 
@@ -247,7 +345,7 @@ async function renderClasses(existingClasses) {
     $('class-table').innerHTML = renderedClassesCache.map((c) => {
       const classId = getClassIdValue(c);
       const teachersDisplay = renderClassTeacherCell(c);
-      return `<tr><td class="fw-600">${c.className || '—'}</td><td>${teachersDisplay}</td><td>${fmt(c.feePerDay)}</td><td>${c.timeTable || '—'}</td><td>${c.totalStudents || 0} HV</td><td><button class="btn btn-outline btn-xs" onclick="openClassModal(${classId})">✏️</button> <button class="btn btn-outline btn-xs" onclick="openClassStudentAssignModal(${classId})">👥</button> <button class="btn btn-danger btn-xs" onclick="deleteClassAlert(${classId})">🗑</button></td></tr>`;
+      return `<tr><td class="fw-600">${c.className || '—'}</td><td>${teachersDisplay}</td><td>${fmt(c.feePerDay)}</td><td>${c.timeTable || '—'}</td><td>${c.totalStudents || 0} HV</td><td><button class="btn btn-outline btn-xs" onclick="openClassModal(${classId})">✏️</button> <button class="btn btn-outline btn-xs" onclick="openClassStudentAssignModal(${classId})">👥</button> <button class="btn btn-danger btn-xs" onclick="deleteClassAlert(event, ${classId})">🗑</button></td></tr>`;
     }).join('');
     return;
   }
@@ -258,6 +356,8 @@ async function renderClasses(existingClasses) {
 async function openClassModal(id) {
   $('edit-class-id').value = id || '';
   $('modal-class-title').textContent = id ? 'Sửa lớp học' : 'Thêm lớp học mới';
+  openModal('modal-class');
+  setModalLoading('modal-class', true, 'Đang tải dữ liệu lớp...');
 
   try {
     if (id) {
@@ -279,12 +379,13 @@ async function openClassModal(id) {
   } catch (err) {
     showToast(err?.message || 'Không thể tải dữ liệu lớp/giáo viên', 'error');
     return;
+  } finally {
+    setModalLoading('modal-class', false);
   }
-
-  openModal('modal-class');
 }
 
-async function saveClass() {
+async function saveClass(event) {
+  setButtonLoading(event, true, 'Đang lưu...');
   const name = $('c-name').value.trim();
   const rate = +$('c-rate').value;
   const schedule = $('c-schedule').value.trim();
@@ -293,6 +394,7 @@ async function saveClass() {
     .filter((teacherId) => teacherId > 0);
 
   if (!name || !rate || teacherIds.length === 0) {
+    setButtonLoading(event, false);
     return showToast('Vui lòng điền đầy đủ thông tin!', 'error');
   }
 
@@ -320,6 +422,8 @@ async function saveClass() {
   } catch (err) {
     showToast(err?.message || 'Lỗi lưu lớp học', 'error');
     return;
+  } finally {
+    setButtonLoading(event, false);
   }
 
   closeModal('modal-class');
@@ -335,6 +439,8 @@ async function openClassStudentAssignModal(id) {
   }
 
   $('edit-class-student-id').value = String(classId);
+  openModal('modal-class-assign-students');
+  setModalLoading('modal-class-assign-students', true, 'Đang tải danh sách học sinh...');
 
   try {
     const cls = await findClassForEdit(classId);
@@ -353,15 +459,18 @@ async function openClassStudentAssignModal(id) {
 
     await populateClassStudentAssignmentSelect(selectedStudentIds);
     updateClassStudentSelectionCount();
-    openModal('modal-class-assign-students');
   } catch (err) {
     showToast(err?.message || 'Không thể tải danh sách học sinh', 'error');
+  } finally {
+    setModalLoading('modal-class-assign-students', false);
   }
 }
 
-async function saveClassStudentAssignment() {
+async function saveClassStudentAssignment(event) {
+  setButtonLoading(event, true, 'Đang cập nhật...');
   const classId = Number($('edit-class-student-id')?.value || 0);
   if (!classId) {
+    setButtonLoading(event, false);
     showToast('Không tìm thấy lớp học', 'error');
     return;
   }
@@ -394,17 +503,22 @@ async function saveClassStudentAssignment() {
     populateClassSelects();
   } catch (err) {
     showToast(err?.message || 'Lỗi cập nhật học sinh trong lớp', 'error');
+  } finally {
+    setButtonLoading(event, false);
   }
 }
 
-async function deleteClassAlert(id) {
+async function deleteClassAlert(event, id) {
   if (!confirm('Xóa lớp này?')) return;
+  setButtonLoading(event, true, 'Đang xóa...');
   try {
     await deleteClass(id);
     showToast('Đã xóa lớp');
   } catch (err) {
     showToast(err?.message || 'Lỗi xoá lớp', 'error');
     return;
+  } finally {
+    setButtonLoading(event, false);
   }
   renderClasses();
   populateClassSelects();

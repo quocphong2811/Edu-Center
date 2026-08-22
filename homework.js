@@ -1,4 +1,4 @@
-import { $, showToast, getClassName, getListClasses, getStudentsByClass, getStudentsHomework, updateStudentsHomework } from './common.js';
+import { $, showToast, getClassName, getListClasses, getStudentsByClass, getStudentsHomework, updateStudentsHomework, setButtonLoading, showTableLoading } from './common.js';
 
 let homeworkState = null;
 let isSavingHomework = false;
@@ -129,14 +129,18 @@ function renderHomeworkTable() {
 				<tbody>${rows}</tbody>
 			</table>
 		</div>
-		<div class="mt-16"><button class="btn btn-success" onclick="saveHomework()">✓ Lưu ghi nhận</button></div>
+		<div class="mt-16"><button class="btn btn-success" onclick="saveHomework(event)">✓ Lưu ghi nhận</button></div>
 	`;
 }
 
-async function loadHomework() {
+async function loadHomework(event) {
+	setButtonLoading(event, true, 'Đang tải...');
+	$('hw-content').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>#</th><th>Học viên</th><th>BTVN (làm/tổng)</th><th>Tỉ lệ BTVN</th><th>Dò bài (thuộc/tổng)</th><th>Tỉ lệ dò bài</th><th>Ghi chú</th></tr></thead><tbody id="hw-loading-tbody"></tbody></table></div>';
+	showTableLoading('hw-loading-tbody', 7, 'Đang tải bài tập...');
 	const classId = Number($('hw-class-select')?.value || 0);
 	const date = String($('hw-date')?.value || '').trim();
 	if (!classId || !date) {
+		setButtonLoading(event, false);
 		showToast('Chọn lớp và ngày!', 'error');
 		return;
 	}
@@ -176,19 +180,23 @@ async function loadHomework() {
 		showToast('Đã tải danh sách bài tập');
 	} catch (err) {
 		showToast(err?.message || 'Không thể tải dữ liệu bài tập', 'error');
+	} finally {
+		setButtonLoading(event, false);
 	}
 }
 
-async function saveHomework() {
+async function saveHomework(event) {
 	if (!homeworkState) {
 		showToast('Vui lòng tải danh sách trước', 'error');
 		return;
 	}
 	if (isSavingHomework) return;
+	setButtonLoading(event, true, 'Đang lưu...');
 
 	const selectedClassId = Number($('hw-class-select')?.value || 0);
 	const selectedDate = String($('hw-date')?.value || '').trim();
 	if (selectedClassId !== homeworkState.classId || selectedDate !== homeworkState.date) {
+		setButtonLoading(event, false);
 		showToast('Lớp hoặc ngày đã thay đổi, vui lòng tải lại danh sách', 'error');
 		return;
 	}
@@ -222,6 +230,7 @@ async function saveHomework() {
 		showToast(err?.message || 'Không thể lưu dữ liệu bài tập', 'error');
 	} finally {
 		isSavingHomework = false;
+		setButtonLoading(event, false);
 	}
 }
 
@@ -258,6 +267,8 @@ function appendStudentSummary(map, className, student) {
 }
 
 async function renderHWReport() {
+	$('hw-report-body').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Học viên</th><th>Lớp</th><th>BTVN</th><th>Tỉ lệ BTVN</th><th>Dò bài</th><th>Tỉ lệ dò bài</th></tr></thead><tbody id="hw-report-loading-tbody"></tbody></table></div>';
+	showTableLoading('hw-report-loading-tbody', 6, 'Đang tải báo cáo bài tập...');
 	const classId = Number($('hw-report-class')?.value || 0);
 	const month = String($('hw-report-month')?.value || '').trim();
 	if (!month) {

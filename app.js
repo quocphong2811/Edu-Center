@@ -39,13 +39,18 @@ function handleNavigation(page) {
   const title = $('page-title');
   if (title) title.textContent = pageTitles[page] || page;
 
+  if (page === 'students') {
+    populateClassSelects().then(() => window.initializeStudentsPage?.());
+    return;
+  }
+
   if (page === 'dashboard') window.renderDashboard();
-  if (page === 'students') window.renderStudents();
   if (page === 'classes') window.renderClasses();
   if (page === 'teacher-att') window.renderTeacherManagementList?.();
   if (page === 'tuition') {
     $('t-month').value = thisMonth();
-    window.renderTuition();
+    populateClassSelects().then(() => window.initializeTuitionPage?.());
+    return;
   }
   if (page === 'receipts') {
     if ($('rc-filter-month')) $('rc-filter-month').value = thisMonth();

@@ -1,4 +1,4 @@
-import { $, showToast, getStudentsByClass, getStudentsCheckin, updateStudentCheckin } from './common.js';
+import { $, showToast, getStudentsByClass, getStudentsCheckin, updateStudentCheckin, setButtonLoading, showTableLoading } from './common.js';
 
 let studentAttendanceState = null;
 
@@ -101,6 +101,30 @@ function getStatusCellClass(status) {
   return 'not-set';
 }
 
+function getStudentAttendanceSummary(byDate) {
+  const summary = {
+    present: 0,
+    excused: 0,
+    absent: 0,
+    makeup: 0,
+  };
+
+  if (!(byDate instanceof Map)) return summary;
+
+  byDate.forEach((status) => {
+    if (status === 'PRESENT') summary.present += 1;
+    if (status === 'EXCUSED') summary.excused += 1;
+    if (status === 'ABSENT') summary.absent += 1;
+    if (status === 'MAKEUP') summary.makeup += 1;
+  });
+
+  return summary;
+}
+
+function renderSummaryChip(label, value, tone, title) {
+  return `<span class="att-summary-chip ${tone}" title="${title}"><span>${label}</span><strong>${value}</strong></span>`;
+}
+
 function updateCellView(cell, status) {
   if (!cell) return;
   cell.className = `att-cell ${getStatusCellClass(status)}`;
@@ -131,11 +155,12 @@ function renderMonthlyAttendanceTable() {
       </table>
     </div>
     <div class="mt-16 flex gap-8">
-      <button class="btn btn-success" onclick="saveStudentAtt()">✓ Lưu điểm danh tháng</button>
+      <button class="btn btn-success" onclick="saveStudentAtt(event)">✓ Lưu điểm danh tháng</button>
     </div>
   `;
 
   $('satt-tbody').innerHTML = studentAttendanceState.students.map((student) => {
+    const summary = getStudentAttendanceSummary(studentAttendanceState.attendanceByStudent.get(student.studentId));
     const cells = days.map((day) => {
       const date = buildDate(month, day);
       const status = getStatusForDate(student.studentId, date);
@@ -145,14 +170,35 @@ function renderMonthlyAttendanceTable() {
       return `<td class="text-center"><div class="att-cell ${className}" data-student-id="${student.studentId}" data-date="${date}" title="${title}" onclick="toggleStudentAttStatus(${student.studentId}, '${date}')">${label}</div></td>`;
     }).join('');
 
-    return `<tr><td class="fw-600" style="position:sticky;left:0;background:#fff;z-index:1">${student.fullName}</td>${cells}</tr>`;
+    const summaryHtml = [
+      renderSummaryChip('Đã học', summary.present + summary.makeup, 'blue', 'Số buổi đã hoàn thành, gồm có mặt và học bù'),
+      renderSummaryChip('Vắng phép', summary.excused, 'yellow', 'Số buổi vắng có phép'),
+      renderSummaryChip('Vắng KP', summary.absent, 'red', 'Số buổi vắng không phép'),
+      renderSummaryChip('Học bù', summary.makeup, 'green', 'Số buổi học bù'),
+    ].join('');
+
+    return `
+      <tr>
+        <td class="fw-600" style="position:sticky;left:0;background:#fff;z-index:1;min-width:240px;vertical-align:top;">
+          <div>${student.fullName}</div>
+          <div class="att-summary" aria-label="Tóm tắt điểm danh">${summaryHtml}</div>
+        </td>
+        ${cells}
+      </tr>
+    `;
   }).join('');
 }
 
-async function loadStudentAtt() {
+async function loadStudentAtt(event) {
+  setButtonLoading(event, true, 'Đang tải...');
+  $('satt-content').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>Học viên</th></tr></thead><tbody id="satt-loading-tbody"></tbody></table></div>';
+  showTableLoading('satt-loading-tbody', 1, 'Đang tải điểm danh...');
   const classId = Number($('satt-class-select')?.value || 0);
   const month = String($('satt-month')?.value || '').trim();
-  if (!classId || !month) return showToast('Chọn lớp và tháng!', 'error');
+  if (!classId || !month) {
+    setButtonLoading(event, false);
+    return showToast('Chọn lớp và tháng!', 'error');
+  }
 
   try {
     const [studentsInClass, checkinPayload] = await Promise.all([
@@ -165,7 +211,10 @@ async function loadStudentAtt() {
       fullName: getStudentNameValue(student),
     })).filter((student) => student.studentId > 0);
 
-    if (!students.length) return showToast('Lớp chưa có học viên!', 'error');
+    if (!students.length) {
+      showToast('Lớp chưa có học viên!', 'error');
+      return;
+    }
 
     const attendanceByStudent = new Map();
     const attendanceRows = normalizeAttendanceRows(checkinPayload);
@@ -194,6 +243,8 @@ async function loadStudentAtt() {
   } catch (err) {
     showToast(err?.message || 'Không thể tải điểm danh học viên', 'error');
     return;
+  } finally {
+    setButtonLoading(event, false);
   }
 
   renderMonthlyAttendanceTable();
@@ -201,8 +252,10 @@ async function loadStudentAtt() {
   showToast('Đã tải danh sách điểm danh học viên');
 }
 
-async function saveStudentAtt() {
+async function saveStudentAtt(event) {
+  setButtonLoading(event, true, 'Đang lưu...');
   if (!studentAttendanceState) {
+    setButtonLoading(event, false);
     showToast('Vui lòng tải danh sách điểm danh trước', 'error');
     return;
   }
@@ -210,11 +263,13 @@ async function saveStudentAtt() {
   const selectedClassId = Number($('satt-class-select')?.value || 0);
   const selectedMonth = String($('satt-month')?.value || '').trim();
   if (!selectedClassId || !selectedMonth) {
+    setButtonLoading(event, false);
     showToast('Chọn lớp và tháng trước khi lưu', 'error');
     return;
   }
 
   if (selectedClassId !== studentAttendanceState.classId || selectedMonth !== studentAttendanceState.month) {
+    setButtonLoading(event, false);
     showToast('Dữ liệu điểm danh không khớp lớp hoặc tháng đang chọn', 'error');
     return;
   }
@@ -240,6 +295,8 @@ async function saveStudentAtt() {
     await loadStudentAtt();
   } catch (err) {
     showToast(err?.message || 'Không thể lưu điểm danh học viên', 'error');
+  } finally {
+    setButtonLoading(event, false);
   }
 }
 

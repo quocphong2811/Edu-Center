@@ -14,6 +14,83 @@ export const fmtN = (n) => Number(n || 0).toLocaleString('vi-VN');
 export const today = () => new Date().toISOString().slice(0, 10);
 export const thisMonth = () => new Date().toISOString().slice(0, 7);
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+export function setButtonLoading(target, isLoading, loadingText) {
+  const rawTarget = target?.currentTarget ?? target?.target ?? target;
+  const button = rawTarget instanceof HTMLButtonElement
+    ? rawTarget
+    : rawTarget instanceof Element
+      ? rawTarget.closest('button')
+      : null;
+
+  if (!button || !(button instanceof HTMLButtonElement)) return;
+
+  if (isLoading) {
+    if (!button.dataset.loadingOriginalHtml) {
+      button.dataset.loadingOriginalHtml = button.innerHTML;
+    }
+
+    const label = loadingText || button.dataset.loadingText || button.textContent.trim() || 'Đang xử lý...';
+    button.disabled = true;
+    button.classList.add('is-loading');
+    button.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span><span>${escapeHtml(label)}</span>`;
+    return;
+  }
+
+  button.disabled = false;
+  button.classList.remove('is-loading');
+
+  if (button.dataset.loadingOriginalHtml) {
+    button.innerHTML = button.dataset.loadingOriginalHtml;
+    delete button.dataset.loadingOriginalHtml;
+  }
+}
+
+export function showTableLoading(tableBodyId, colSpan, message = 'Đang tải dữ liệu...') {
+  const tbody = $(tableBodyId);
+  if (!tbody) return;
+
+  const safeColSpan = Math.max(1, Number(colSpan) || 1);
+  const safeMessage = escapeHtml(message);
+  tbody.innerHTML = `<tr class="table-loading-row"><td colspan="${safeColSpan}" class="text-center"><span class="table-loading-inline"><span class="table-spinner" aria-hidden="true"></span><span>${safeMessage}</span></span></td></tr>`;
+}
+
+export function setModalLoading(modalId, isLoading, message = 'Đang tải dữ liệu...') {
+  const overlayEl = $(modalId);
+  if (!overlayEl) return;
+
+  const modalEl = overlayEl.querySelector('.modal');
+  if (!modalEl) return;
+
+  let loadingMask = modalEl.querySelector('.modal-loading-mask');
+  if (!loadingMask) {
+    loadingMask = document.createElement('div');
+    loadingMask.className = 'modal-loading-mask';
+    loadingMask.innerHTML = '<div class="modal-loading-content"><span class="table-spinner" aria-hidden="true"></span><span class="modal-loading-message"></span></div>';
+    modalEl.appendChild(loadingMask);
+  }
+
+  const loadingMessage = loadingMask.querySelector('.modal-loading-message');
+  if (loadingMessage) {
+    loadingMessage.textContent = message || 'Đang tải dữ liệu...';
+  }
+
+  if (isLoading) {
+    modalEl.classList.add('is-loading');
+    return;
+  }
+
+  modalEl.classList.remove('is-loading');
+}
+
 export function showToast(msg, type = 'success') {
   const t = $('toast');
   if (!t) return;
@@ -220,8 +297,104 @@ export async function deleteClass(classId) {
   return res;
 }
 
+const STUDENT_PAGE_SIZE = 50;
+const STUDENT_SCROLL_PREFETCH_PX = 48;
+const rcStudentLazyStates = new WeakMap();
+
+function normalizeStudentListPayload(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.students)) return payload.students;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  return [];
+}
+
+function getStudentFullName(student) {
+  return student?.fullName ?? student?.studentFullName ?? student?.name ?? '—';
+}
+
+function getStudentClassId(student) {
+  return student?.classId ?? student?.class_id ?? null;
+}
+
+function shouldLoadMoreOnScroll(el, threshold = STUDENT_SCROLL_PREFETCH_PX) {
+  if (!el) return false;
+  return el.scrollTop + el.clientHeight >= el.scrollHeight - threshold;
+}
+
+function getRcStudentLazyState(selectEl) {
+  let state = rcStudentLazyStates.get(selectEl);
+  if (state) return state;
+
+  state = {
+    isLoading: false,
+    hasMore: true,
+    offset: 0,
+    version: 0,
+    loadedIds: new Set(),
+  };
+
+  const onScroll = async () => {
+    if (!shouldLoadMoreOnScroll(selectEl)) return;
+    await loadMoreRcStudentOptions(selectEl, state);
+  };
+
+  selectEl.addEventListener('scroll', onScroll);
+  state.onScroll = onScroll;
+  rcStudentLazyStates.set(selectEl, state);
+  return state;
+}
+
+async function loadMoreRcStudentOptions(selectEl, state) {
+  if (!selectEl || state.isLoading || !state.hasMore) return;
+
+  const requestVersion = state.version;
+  state.isLoading = true;
+  try {
+    const payload = await getListStudents({
+      limit: STUDENT_PAGE_SIZE,
+      offset: state.offset,
+    });
+
+    if (requestVersion !== state.version) return;
+
+    const students = normalizeStudentListPayload(payload);
+    students.forEach((student) => {
+      const studentId = Number(student?.id ?? student?.studentId ?? student?.student_id ?? 0);
+      if (!studentId || state.loadedIds.has(studentId)) return;
+      state.loadedIds.add(studentId);
+
+      const label = `${getStudentFullName(student)} — ${getClassName(getStudentClassId(student))}`;
+      selectEl.add(new Option(label, String(studentId)));
+    });
+
+    state.offset += students.length;
+    state.hasMore = students.length === STUDENT_PAGE_SIZE;
+  } finally {
+    if (requestVersion === state.version) {
+      state.isLoading = false;
+    }
+  }
+}
+
 export async function getListStudents(options = {}) {
-  const res = await apiGet(`/functions/v1/get-list-students`, {
+  const limit = Number(options?.limit);
+  const offset = Number(options?.offset);
+  const query = new URLSearchParams();
+
+  if (Number.isFinite(limit) && limit > 0) {
+    query.set('limit', String(Math.trunc(limit)));
+  }
+  if (Number.isFinite(offset) && offset >= 0) {
+    query.set('offset', String(Math.trunc(offset)));
+  }
+
+  const path = query.toString()
+    ? `/functions/v1/get-list-students?${query.toString()}`
+    : '/functions/v1/get-list-students';
+
+  const res = await apiGet(path, {
     headers: {
       apikey: SUPABASE_KEY,
     },
@@ -332,6 +505,35 @@ export async function getTeachersByClassAndMonth(classId, month) {
   return res;
 }
 
+/**
+ * @typedef {{
+ *   month: string,
+ *   teachers: Array<{
+ *     teacherId: number,
+ *     classes: Array<{
+ *       classId: number,
+ *       checkedDates: string[]
+ *     }>
+ *   }>
+ * }} UpdateTeacherCheckinRequest
+ *
+ * @typedef {{
+ *   success: boolean,
+ *   month: string,
+ *   teachers: Array<{
+ *     teacherId: number,
+ *     classes: Array<{
+ *       classId: number,
+ *       totalCheckinDays: number
+ *     }>
+ *   }>
+ * }} UpdateTeacherCheckinResponse
+ */
+
+/**
+ * @param {UpdateTeacherCheckinRequest} payload
+ * @returns {Promise<UpdateTeacherCheckinResponse>}
+ */
 export async function updateTeacherCheckin(payload) {
   const res = await apiPut(`/functions/v1/update-teacher-checkin`, {
     headers: {
@@ -646,11 +848,17 @@ export async function populateClassSelects() {
   const rcSel = $('rc-student');
   if (rcSel) {
     const val = rcSel.value;
+
+    const lazyState = getRcStudentLazyState(rcSel);
+    lazyState.version += 1;
+    lazyState.isLoading = false;
+    lazyState.hasMore = true;
+    lazyState.offset = 0;
+    lazyState.loadedIds.clear();
+
     while (rcSel.options.length > 1) rcSel.remove(1);
-    const students = await getListStudents();
-    students.forEach((student) => {
-      rcSel.add(new Option(`${student.fullName} — ${getClassName(student.classId)}`, student.id));
-    });
+
+    await loadMoreRcStudentOptions(rcSel, lazyState);
     rcSel.value = val;
   }
 }
@@ -662,6 +870,9 @@ Object.assign(window, {
   fmtN,
   today,
   thisMonth,
+  setButtonLoading,
+  showTableLoading,
+  setModalLoading,
   showToast,
   openModal,
   closeModal,

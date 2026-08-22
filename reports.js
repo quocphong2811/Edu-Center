@@ -1,4 +1,4 @@
-import { $, fmt, showToast, getTuitionRows, getReceiptRows, thisMonth } from './common.js';
+import { $, fmt, showToast, getTuitionRows, getReceiptRows, thisMonth, setButtonLoading, showTableLoading } from './common.js';
 
 async function getMonthAggregate(month) {
   const [tuitionRows, receiptRows] = await Promise.all([
@@ -53,7 +53,9 @@ async function buildYearlyData(year) {
   }));
 }
 
-async function renderReport() {
+async function renderReport(event) {
+  setButtonLoading(event, true, 'Đang tải...');
+  showTableLoading('report-table', 6, 'Đang tải báo cáo...');
   const year = +$('rpt-year').value || new Date().getFullYear();
   const currentYear = new Date().getFullYear();
   const defaultMonth = year === currentYear ? thisMonth() : `${year}-01`;
@@ -82,6 +84,8 @@ async function renderReport() {
     $('report-table').innerHTML = '<tr><td colspan="6" class="text-muted text-center">Không tải được dữ liệu báo cáo</td></tr>';
     renderMonthlyKpis({ paid: 0, unpaid: 0, revenue: 0, totalOwed: 0 }, selectedMonth);
     showToast(err?.message || 'Không thể tải báo cáo doanh thu', 'error');
+  } finally {
+    setButtonLoading(event, false);
   }
 }
 

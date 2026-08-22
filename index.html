@@ -207,6 +207,13 @@
   }
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover td { background: var(--gray-50); }
+  .table-loading-row td { background: #fff !important; padding: 16px 12px; }
+  .table-loading-inline { display: inline-flex; align-items: center; gap: 8px; color: var(--gray-500); font-size: 13px; font-weight: 500; }
+  .table-spinner {
+    width: 14px; height: 14px; flex: 0 0 14px;
+    border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+    animation: btn-spin 0.7s linear infinite;
+  }
 
   /* ── BUTTONS ── */
   .btn {
@@ -228,6 +235,13 @@
   .btn-outline:hover { background: var(--gray-50); }
   .btn-sm { padding: 4px 10px; font-size: 12px; }
   .btn-xs { padding: 3px 8px; font-size: 11px; }
+  .btn.is-loading { justify-content: center; }
+  .btn-spinner {
+    width: 14px; height: 14px; flex: 0 0 14px;
+    border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+    animation: btn-spin 0.7s linear infinite;
+  }
+  @keyframes btn-spin { to { transform: rotate(360deg); } }
 
   /* ── FORM ── */
   .form-grid { display: grid; gap: 14px; }
@@ -264,7 +278,38 @@
     background: #fff; border-radius: 12px; padding: 24px;
     min-width: 420px; max-width: 560px; width: 90%;
     max-height: 85vh; overflow-y: auto;
+    position: relative;
     box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  }
+  .modal.is-loading > :not(.modal-loading-mask) {
+    pointer-events: none;
+    user-select: none;
+  }
+  .modal-loading-mask {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.72);
+    z-index: 12;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+  }
+  .modal.is-loading .modal-loading-mask {
+    display: flex;
+  }
+  .modal-loading-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--gray-600);
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
   }
   .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
   .modal-header h3 { font-size: 15px; font-weight: 600; }
@@ -375,6 +420,48 @@
   .att-cell.absent-excused { background: var(--yellow-light); color: #92400E; border-color: #FDE68A; }
   .att-cell.absent-unexcused { background: var(--red-light); color: #991B1B; border-color: #FCA5A5; }
   .att-cell.not-set { background: var(--gray-100); color: var(--gray-400); border-color: var(--gray-200); }
+
+  .att-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .att-summary-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    line-height: 1;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .att-summary-chip strong {
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .att-summary-chip.blue {
+    background: var(--blue-light);
+    color: #1E40AF;
+    border-color: #BFDBFE;
+  }
+  .att-summary-chip.green {
+    background: var(--green-light);
+    color: #065F46;
+    border-color: #A7F3D0;
+  }
+  .att-summary-chip.yellow {
+    background: var(--yellow-light);
+    color: #92400E;
+    border-color: #FDE68A;
+  }
+  .att-summary-chip.red {
+    background: var(--red-light);
+    color: #991B1B;
+    border-color: #FCA5A5;
+  }
 
   /* ── PROGRESS BAR ── */
   .progress-bar { background: var(--gray-100); border-radius: 99px; height: 6px; overflow: hidden; }
@@ -529,14 +616,14 @@
           <div class="flex gap-8 flex-wrap">
             <div class="search-box"><input type="text" class="form-control" id="student-search" placeholder="Tìm kiếm..." oninput="window.filterStudentsByKeyword()"></div>
             <select class="form-control" id="student-filter-class" onchange="window.filterStudentsByClass()">
-              <option value="">— Tất cả lớp —</option>
+              <option value="">— Chọn lớp —</option>
             </select>
             <button class="btn btn-primary" onclick="openStudentModal()">＋ Thêm học viên</button>
           </div>
         </div>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>#</th><th>Họ tên</th><th>Lớp</th><th>SĐT Học viên</th><th>SĐT Phụ huynh</th><th>Trạng thái HP</th><th>Thao tác</th></tr></thead>
+            <thead><tr><th>ID</th><th>Họ tên</th><th>Lớp</th><th>SĐT Học viên</th><th>SĐT Phụ huynh</th><th>Trạng thái HP</th><th>Thao tác</th></tr></thead>
             <tbody id="student-table"></tbody>
           </table>
         </div>
@@ -563,7 +650,6 @@
     <div id="page-teacher-att" class="page">
       <div class="stats-row">
         <div class="stat-card blue"><div class="stat-label">Tổng buổi dạy tháng này</div><div class="stat-value" id="tatt-total">0</div></div>
-        <div class="stat-card green"><div class="stat-label">Tổng HP phát sinh</div><div class="stat-value" id="tatt-tuition">0đ</div></div>
       </div>
       <div class="card">
         <div class="card-header">
@@ -571,8 +657,8 @@
           <div class="flex gap-8 flex-wrap">
             <select class="form-control" id="tatt-class-select"><option value="">— Chọn lớp —</option></select>
             <input type="month" class="form-control" id="tatt-month">
-            <button class="btn btn-primary" onclick="loadTeacherAtt()">Xem</button>
-            <button class="btn btn-success" onclick="saveTeacherAtt()">Lưu điểm danh</button>
+            <button class="btn btn-primary" onclick="loadTeacherAtt(event)">Xem</button>
+            <button class="btn btn-success" onclick="saveTeacherAtt(event)">Lưu điểm danh</button>
             <button class="btn btn-outline" onclick="openTeacherCreateModal()">＋ Thêm giáo viên</button>
           </div>
         </div>
@@ -584,7 +670,7 @@
       <div class="card">
         <div class="card-header">
           <h3>👩‍🏫 Danh sách giáo viên</h3>
-          <button class="btn btn-outline" onclick="renderTeacherManagementList()">↻ Tải lại</button>
+          <button class="btn btn-outline" onclick="renderTeacherManagementList(event)">↻ Tải lại</button>
         </div>
         <div class="tbl-wrap">
           <table>
@@ -603,7 +689,7 @@
           <div class="flex gap-8 flex-wrap">
             <select class="form-control" id="satt-class-select"><option value="">— Chọn lớp —</option></select>
             <input type="month" class="form-control" id="satt-month">
-            <button class="btn btn-primary" onclick="loadStudentAtt()">Tải danh sách</button>
+            <button class="btn btn-primary" onclick="loadStudentAtt(event)">Tải danh sách</button>
           </div>
         </div>
         <div class="card-body" id="satt-content">
@@ -626,7 +712,7 @@
             <div class="flex gap-8 flex-wrap">
               <select class="form-control" id="hw-class-select"><option value="">— Chọn lớp —</option></select>
               <input type="date" class="form-control" id="hw-date">
-              <button class="btn btn-primary" onclick="loadHomework()">Tải danh sách</button>
+              <button class="btn btn-primary" onclick="loadHomework(event)">Tải danh sách</button>
             </div>
           </div>
           <div class="card-body" id="hw-content">
@@ -659,14 +745,14 @@
           <h3>💰 Bảng học phí</h3>
           <div class="flex gap-8 flex-wrap">
             <input type="month" class="form-control" id="t-month">
-            <select class="form-control" id="t-filter-class"><option value="">— Tất cả lớp —</option></select>
+            <select class="form-control" id="t-filter-class"><option value="">— Chọn lớp —</option></select>
             <select class="form-control" id="t-filter-status">
               <option value="">— Tất cả —</option>
               <option value="paid">Đã nộp đủ</option>
               <option value="partial">Nộp một phần</option>
               <option value="unpaid">Chưa nộp</option>
             </select>
-            <button class="btn btn-outline" onclick="renderTuition()">Lọc</button>
+            <button class="btn btn-outline" onclick="renderTuition(event)">Lọc</button>
           </div>
         </div>
         <div class="tbl-wrap">
@@ -714,7 +800,7 @@
           <div class="flex gap-8">
             <input type="number" class="form-control" id="rpt-year" placeholder="Năm" style="width:90px">
             <input type="month" class="form-control" id="rpt-month">
-            <button class="btn btn-primary" onclick="renderReport()">Xem báo cáo</button>
+            <button class="btn btn-primary" onclick="renderReport(event)">Xem báo cáo</button>
             <button class="btn btn-outline" onclick="exportReport()">⬇ Xuất CSV</button>
           </div>
         </div>
@@ -757,7 +843,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-student')">Hủy</button>
-      <button class="btn btn-primary" onclick="saveStudent()">Lưu</button>
+      <button class="btn btn-primary" onclick="saveStudent(event)">Lưu</button>
     </div>
   </div>
 </div>
@@ -784,7 +870,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-class')">Hủy</button>
-      <button class="btn btn-primary" onclick="saveClass()">Lưu</button>
+      <button class="btn btn-primary" onclick="saveClass(event)">Lưu</button>
     </div>
   </div>
 </div>
@@ -802,7 +888,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-teacher-create')">Hủy</button>
-      <button class="btn btn-primary" onclick="saveTeacherFromAttendance()">Lưu</button>
+      <button class="btn btn-primary" onclick="saveTeacherFromAttendance(event)">Lưu</button>
     </div>
   </div>
 </div>
@@ -821,7 +907,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-teacher-edit')">Hủy</button>
-      <button class="btn btn-primary" onclick="saveTeacherEdit()">Lưu thay đổi</button>
+      <button class="btn btn-primary" onclick="saveTeacherEdit(event)">Lưu thay đổi</button>
     </div>
   </div>
 </div>
@@ -844,7 +930,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-class-assign-students')">Hủy</button>
-      <button class="btn btn-primary" onclick="saveClassStudentAssignment()">Cập nhật học sinh</button>
+      <button class="btn btn-primary" onclick="saveClassStudentAssignment(event)">Cập nhật học sinh</button>
     </div>
   </div>
 </div>
@@ -866,7 +952,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modal-payment')">Hủy</button>
-      <button class="btn btn-success" onclick="savePayment()">✓ Xác nhận thanh toán</button>
+      <button class="btn btn-success" onclick="savePayment(event)">✓ Xác nhận thanh toán</button>
     </div>
   </div>
 </div>

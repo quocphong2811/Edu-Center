@@ -1,4 +1,4 @@
-import { $, fmt, thisMonth, getListStudents, getListClasses, getTuitionRows, getReceiptRows, showToast } from './common.js';
+import { $, fmt, thisMonth, getListStudents, getListClasses, getTuitionRows, getReceiptRows, showToast, showTableLoading } from './common.js';
 
 function getClassIdValue(cls) {
   return Number(cls?.id ?? cls?.classId ?? cls?.class_id ?? 0);
@@ -50,6 +50,8 @@ function setDashboardFallback() {
 }
 
 async function renderDashboard() {
+  showTableLoading('dash-unpaid-list', 3, 'Đang tải dữ liệu...');
+  showTableLoading('dash-classes-table', 4, 'Đang tải dữ liệu...');
   const month = thisMonth();
 
   try {
