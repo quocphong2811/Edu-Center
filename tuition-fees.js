@@ -108,6 +108,8 @@ async function renderTuition(event) {
       totalPaid += Number(row.paid || 0);
       totalOwed += Number(row.remaining || 0);
 
+      const creditBalance = Math.max(0, Number(row.creditBalance ?? 0));
+
       const badge =
         row.status === 'paid'
           ? '<span class="badge badge-green">Đã nộp đủ</span>'
@@ -121,7 +123,12 @@ async function renderTuition(event) {
         ? row.classRates.map((item) => `${fmt(item.rate)}`).join(', ')
         : fmt(row.rate);
 
-      return `<tr><td class="fw-600">${row.studentName}</td><td>${row.className || '—'}</td><td>${row.sessions}</td><td>${rateText}</td><td class="fw-600">${fmt(row.required)}</td><td style="color:var(--green)">${fmt(row.paid)}</td><td style="color:var(--red);font-weight:${row.remaining > 0 ? 600 : 400}">${row.remaining > 0 ? fmt(row.remaining) : '—'}</td><td>${badge}</td><td>${row.required > 0 && row.remaining > 0 ? `<button class="btn btn-success btn-xs" onclick="openPaymentModal(${row.studentId},'${month}',${row.required})">💳 Thu tiền</button>` : ''}</td></tr>`;
+      return `<tr><td class="fw-600">${row.studentName}</td><td>${row.className || '—'}</td><td>${row.sessions}</td><td>${rateText}</td><td class="fw-600">${fmt(row.required)}</td><td style="color:var(--green)">
+  ${fmt(row.paid)}
+  ${creditBalance > 0
+    ? `<div class="text-muted" style="font-size:.8em">Dư: ${fmt(creditBalance)}</div>`
+    : ''}
+</td><td style="color:var(--red);font-weight:${row.remaining > 0 ? 600 : 400}">${row.remaining > 0 ? fmt(row.remaining) : '—'}</td><td>${badge}</td><td>${row.studentId ? `<button class="btn btn-success btn-xs" onclick="openPaymentModal(${row.studentId},'${month}',${row.required})">${row.remaining > 0 ? '💳 Thu tiền' : '💰 Nộp trước'}</button>` : ''}</td></tr>`;
     }).filter(Boolean);
 
     setText('t-paid', paid);
@@ -142,11 +149,26 @@ function openPaymentModal(studentId, month, required) {
   const row = getCachedRow(studentId, month);
   const paid = Number(row?.paid || 0);
   const fallbackRemaining = Math.max(0, Number(required || 0) - paid);
+  const remaining = Math.max(
+    0,
+    Number(row?.remaining ?? fallbackRemaining),
+  );
+  const creditBalance = Math.max(
+    0,
+    Number(row?.creditBalance ?? 0),
+  );
 
   $('pay-student-id').value = studentId;
   $('pay-name').value = row?.studentName || `HV #${studentId}`;
   $('pay-month').value = month;
-  $('pay-required').value = fmt(row?.remaining ?? fallbackRemaining) + ' (còn thiếu)';
+
+  $('pay-required').value =
+    remaining > 0
+      ? `${fmt(remaining)} (còn thiếu)`
+      : creditBalance > 0
+        ? `${fmt(creditBalance)} (số dư nộp trước hiện có)`
+        : 'Chưa phát sinh học phí — khoản nộp sẽ được ghi là nộp trước';
+
   $('pay-amount').value = '';
   if ($('pay-note')) $('pay-note').value = '';
   window.openModal?.('modal-payment');
@@ -174,11 +196,11 @@ async function savePayment(event) {
     });
 
     window.closeModal?.('modal-payment');
-    showToast(`Đã ghi nhận thanh toán ${fmt(amount)} từ ${row?.studentName || `HV #${studentId}`}`);
+    showToast(`Đã ghi nhận khoản nộp ${fmt(amount)} từ ${row?.studentName || `HV #${studentId}`}`);
     await renderTuition();
     await window.filterReceipts?.();
   } catch (err) {
-    showToast(err?.message || 'Không thể ghi nhận thanh toán', 'error');
+    showToast(err?.message || 'Không thể ghi nhận khoản nộp', 'error');
   } finally {
     isSavingPayment = false;
     setButtonLoading(event, false);
