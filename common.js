@@ -691,6 +691,15 @@ export function normalizeTuitionRow(row) {
 
   const remainingRaw = row?.remaining ?? row?.remainingFee ?? row?.remainingAmount ?? row?.remaining_amount ?? row?.owed ?? row?.debt;
   const remaining = Number(remainingRaw != null ? remainingRaw : Math.max(0, required - paid));
+  const creditBalance = Number(
+    row?.creditBalance
+      ?? row?.credit_balance
+      ?? row?.prepaidBalance
+      ?? row?.prepaid_balance
+      ?? row?.advanceBalance
+      ?? row?.advance_balance
+      ?? 0
+  );
 
   const singleClassRate = classes.length === 1 ? Number(classes[0]?.feePerDay ?? classes[0]?.rate ?? 0) : 0;
   const calculatedRate = sessions > 0 ? Math.round(totalFee / sessions) : 0;
@@ -709,6 +718,7 @@ export function normalizeTuitionRow(row) {
     required,
     paid,
     remaining,
+    creditBalance,
     status: normalizeTuitionStatus(row?.status ?? row?.paymentStatus ?? row?.payment_status, required, paid, remaining),
   };
 }

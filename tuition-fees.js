@@ -128,7 +128,7 @@ async function renderTuition(event) {
   ${creditBalance > 0
     ? `<div class="text-muted" style="font-size:.8em">Dư: ${fmt(creditBalance)}</div>`
     : ''}
-</td><td style="color:var(--red);font-weight:${row.remaining > 0 ? 600 : 400}">${row.remaining > 0 ? fmt(row.remaining) : '—'}</td><td>${badge}</td><td>${row.studentId ? `<button class="btn btn-success btn-xs" onclick="openPaymentModal(${row.studentId},'${month}',${row.required})">${row.remaining > 0 ? '💳 Thu tiền' : '💰 Nộp trước'}</button>` : ''}</td></tr>`;
+</td><td style="color:var(--red);font-weight:${row.remaining > 0 ? 600 : 400}">${row.remaining > 0 ? fmt(row.remaining) : '—'}</td><td>${badge}</td><td>${row.studentId ? `<button class="btn btn-success btn-xs" onclick="openPaymentModal(${row.studentId},'${month}',${row.required})">${'💰 Nộp tiền'}</button>` : ''}</td></tr>`;
     }).filter(Boolean);
 
     setText('t-paid', paid);
